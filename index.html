@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1F4E79">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tracker">
+  <title>Personal Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+/* css/variables.css — Design Tokens */
+:root {
+  /* Primary */
+  --color-primary:       #1F4E79;
+  --color-primary-light: #2E75B6;
+  --color-primary-pale:  #E6F1FB;
+
+  /* Status */
+  --color-success-bg:    #C6EFCE;
+  --color-success-text:  #375623;
+  --color-warning-bg:    #FFEB9C;
+  --color-warning-text:  #9C6500;
+  --color-danger-bg:     #FFC7CE;
+  --color-danger-text:   #9C0006;
+
+  /* Journal (ungu) */
+  --color-journal:       #3C3489;
+  --color-journal-pale:  #EEEDFE;
+
+  /* Aktivitas (hijau) */
+  --color-activity:      #375623;
+  --color-activity-pale: #EAF3DE;
+
+  /* Neutral */
+  --color-bg:            #FFFFFF;
+  --color-bg-secondary:  #F2F2F2;
+  --color-text:          #000000;
+  --color-text-muted:    #595959;
+  --color-border:        rgba(0,0,0,0.15);
+
+  /* Border radius */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-full: 99px;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+
+  /* Typography */
+  --font-size-sm:   13px;
+  --font-size-base: 15px;
+  --font-size-md:   17px;
+  --font-size-lg:   20px;
+  --font-size-xl:   24px;
+
+  /* Layout */
+  --bottom-nav-height: 64px;
+  --fab-size:          52px;
+}
+
+/* Dark mode — dikendalikan class di <html> */
+html.dark {
+  --color-bg:           #1A1A1A;
+  --color-bg-secondary: #2A2A2A;
+  --color-text:         #FFFFFF;
+  --color-text-muted:   #AAAAAA;
+  --color-border:       rgba(255,255,255,0.15);
+  --color-primary-pale: #1a3a5c;
+  --color-journal-pale: #1e1a40;
+  --color-activity-pale:#1a2e14;
+}
+
+/* Fallback: ikuti sistem jika belum ada preferensi tersimpan */
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    --color-bg:           #1A1A1A;
+    --color-bg-secondary: #2A2A2A;
+    --color-text:         #FFFFFF;
+    --color-text-muted:   #AAAAAA;
+    --color-border:       rgba(255,255,255,0.15);
+    --color-primary-pale: #1a3a5c;
+    --color-journal-pale: #1e1a40;
+    --color-activity-pale:#1a2e14;
+  }
+}
+
+
+/* Transisi mulus saat ganti mode */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body, .card, .bottom-nav, .fab-sheet, input, textarea, select {
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+html { font-size: var(--font-size-base); -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text);
+  min-height: 100vh;
+  padding-bottom: calc(var(--bottom-nav-height) + 24px);
+  overflow-x: hidden;
+}
+
+#app { max-width: 480px; margin: 0 auto; padding: var(--space-md); min-height: 100vh; }
+
+h1 { font-size: var(--font-size-xl); font-weight: 800; line-height: 1.2; }
+h2 { font-size: var(--font-size-lg); font-weight: 700; line-height: 1.3; }
+h3 { font-size: var(--font-size-md); font-weight: 600; line-height: 1.4; }
+p  { font-size: var(--font-size-base); line-height: 1.5; }
+
+a { color: var(--color-primary); text-decoration: none; }
+
+button {
+  cursor: pointer; border: none; background: none;
+  font-family: inherit; font-size: inherit;
+  -webkit-touch-callout: none; user-select: none;
+}
+
+input, textarea, select {
+  font-family: inherit; font-size: var(--font-size-base);
+  color: var(--color-text); background-color: var(--color-bg);
+  border: 1.5px solid var(--color-border); border-radius: var(--radius-lg);
+  padding: 12px var(--space-md); width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-pale);
+}
+textarea { resize: vertical; min-height: 100px; }
+
+.screen-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--space-lg); padding-top: var(--space-sm);
+}
+.screen-title { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text); }
+.divider { height: 1px; background: var(--color-border); margin: var(--space-md) 0; }
+
+.empty-state { text-align: center; padding: 48px var(--space-lg) var(--space-xl); color: var(--color-text-muted); }
+.empty-state-icon {
+  font-size: 64px; margin-bottom: var(--space-md); display: block;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+  animation: floatIcon 3s ease-in-out infinite;
+}
+@keyframes floatIcon { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+.empty-state-title { font-size: var(--font-size-md); font-weight: 700; margin-bottom: var(--space-sm); color: var(--color-text); }
+
+.loading { text-align: center; padding: var(--space-xl); color: var(--color-text-muted); }
+.loading::after {
+  content: ''; display: block; width: 32px; height: 32px;
+  border: 3px solid var(--color-border); border-top-color: var(--color-primary);
+  border-radius: 50%; margin: var(--space-md) auto 0;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.form-group { margin-bottom: var(--space-md); }
+.form-label {
+  display: block; font-size: var(--font-size-sm); font-weight: 700;
+  color: var(--color-text-muted); margin-bottom: 6px;
+  text-transform: uppercase; letter-spacing: 0.6px;
+}
+.form-hint { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-top: 6px; line-height: 1.5; }
+
+/* ── Bottom Nav ─────────────────────────────────────────── */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; height: var(--bottom-nav-height);
+  background: var(--color-bg); border-top: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: space-around;
+  z-index: 100; padding: 0 var(--space-sm);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; padding: 6px var(--space-sm); color: var(--color-text-muted);
+  font-size: 10px; font-weight: 600; cursor: pointer;
+  border-radius: var(--radius-lg); transition: color 0.15s; flex: 1; min-height: 48px;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+.nav-icon { font-size: 22px; line-height: 1; display: block; pointer-events: none; }
+.nav-item.active { color: var(--color-primary); }
+
+/* ── FAB ────────────────────────────────────────────────── */
+.fab {
+  width: var(--fab-size); height: var(--fab-size); border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  color: white; font-size: 26px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(31,78,121,0.45); margin-top: -20px; flex-shrink: 0;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s;
+  line-height: 1; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
+}
+.fab:active { transform: scale(0.9) translateY(2px); }
+.fab.open { background: linear-gradient(135deg,#555,#333); transform: rotate(45deg); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+
+.fab-sheet {
+  position: fixed; bottom: calc(var(--bottom-nav-height) + var(--space-sm));
+  left: 50%; transform: translateX(-50%) translateY(20px);
+  width: calc(100% - 32px); max-width: 420px; background: var(--color-bg);
+  border-radius: var(--radius-xl); padding: var(--space-sm); z-index: 200;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 -2px 40px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.1);
+}
+.fab-sheet.open { opacity: 1; pointer-events: all; transform: translateX(-50%) translateY(0); }
+
+.fab-option {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: 12px var(--space-md); border-radius: var(--radius-lg); cursor: pointer;
+  transition: background 0.15s; touch-action: manipulation; user-select: none;
+}
+.fab-option:active { background: var(--color-bg-secondary); transform: scale(0.98); }
+.fab-option-icon {
+  font-size: 26px; width: 46px; height: 46px; display: flex; align-items: center;
+  justify-content: center; background: var(--color-primary-pale); border-radius: var(--radius-md);
+  flex-shrink: 0; pointer-events: none;
+}
+.fab-option-name { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text); }
+.fab-option-sub { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-top: 1px; }
+
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); backdrop-filter: blur(2px);
+  z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+/* ── Card ───────────────────────────────────────────────── */
+.card {
+  background: var(--color-bg); border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl); padding: var(--space-md); margin-bottom: var(--space-sm);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.card-title {
+  font-size: 11px; font-weight: 700; color: var(--color-text-muted);
+  text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: var(--space-sm);
+}
+
+/* ── Badge ──────────────────────────────────────────────── */
+.badge { display: inline-block; padding: 3px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 700; }
+.badge-done    { background: var(--color-success-bg); color: var(--color-success-text); }
+.badge-todo    { background: var(--color-bg-secondary); color: var(--color-text-muted); }
+.badge-progress{ background: var(--color-warning-bg); color: var(--color-warning-text); }
+.badge-cancel  { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* ── Chip ───────────────────────────────────────────────── */
+.chip-group { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.chip {
+  padding: 7px 16px; border-radius: var(--radius-full); border: 1.5px solid var(--color-border);
+  font-size: var(--font-size-sm); font-weight: 600; cursor: pointer;
+  background: var(--color-bg); color: var(--color-text); transition: all 0.15s;
+  touch-action: manipulation; user-select: none;
+}
+.chip.selected {
+  background: var(--color-primary); border-color: var(--color-primary);
+  color: white; box-shadow: 0 2px 8px rgba(31,78,121,0.3);
+}
+
+/* ── Button ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs);
+  padding: 14px var(--space-lg); border-radius: var(--radius-lg);
+  font-size: var(--font-size-base); font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s; width: 100%;
+  touch-action: manipulation; user-select: none;
+}
+.btn:active { transform: scale(0.97); opacity: 0.88; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-light), var(--color-primary));
+  color: white; box-shadow: 0 3px 12px rgba(31,78,121,0.35);
+}
+.btn-secondary { background: var(--color-bg-secondary); color: var(--color-text); border: 1px solid var(--color-border); }
+.btn-danger { background: var(--color-danger-bg); color: var(--color-danger-text); }
+
+/* ── Progress Bar ───────────────────────────────────────── */
+.progress-bar { height: 8px; background: var(--color-bg-secondary); border-radius: var(--radius-full); overflow: hidden; }
+.progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
+  border-radius: var(--radius-full); transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Streak Badge ───────────────────────────────────────── */
+.streak-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: linear-gradient(135deg, #f97316, #ef4444);
+  color: white; padding: 6px 14px; border-radius: var(--radius-full);
+  font-weight: 800; font-size: var(--font-size-base);
+  box-shadow: 0 3px 10px rgba(239,68,68,0.35);
+}
+
+/* ── KPI Grid ───────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.kpi-card {
+  background: var(--color-bg-secondary); border-radius: var(--radius-lg);
+  padding: var(--space-md); position: relative; overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--color-primary-light), var(--color-primary));
+}
+.kpi-value { font-size: var(--font-size-xl); font-weight: 800; color: var(--color-primary); line-height: 1.1; }
+.kpi-label { font-size: 11px; color: var(--color-text-muted); margin-top: 4px; font-weight: 500; }
+
+/* ── Mood Selector ──────────────────────────────────────── */
+.mood-selector { display: flex; gap: 6px; justify-content: space-between; }
+.mood-btn {
+  flex: 1; aspect-ratio: 1; border-radius: var(--radius-lg); border: 2px solid var(--color-border);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s; background: var(--color-bg);
+  touch-action: manipulation; user-select: none; padding: 4px 2px;
+}
+.mood-btn.selected {
+  border-color: var(--color-primary); background: var(--color-primary-pale);
+  transform: scale(1.08); box-shadow: 0 4px 12px rgba(31,78,121,0.2);
+}
+
+/* ── Onboarding ─────────────────────────────────────────── */
+.onboarding-screen {
+  min-height: 100vh; display: flex; flex-direction: column;
+  padding: var(--space-xl) var(--space-lg); padding-bottom: 120px;
+}
+.onboarding-step {
+  font-size: var(--font-size-sm); font-weight: 600; color: var(--color-primary);
+  margin-bottom: var(--space-lg); background: var(--color-primary-pale);
+  display: inline-block; padding: 4px 12px; border-radius: var(--radius-full);
+}
+.onboarding-title { font-size: var(--font-size-xl); font-weight: 800; margin-bottom: var(--space-sm); line-height: 1.2; }
+.onboarding-sub { color: var(--color-text-muted); margin-bottom: var(--space-xl); line-height: 1.7; }
+.onboarding-footer {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; padding: var(--space-md) var(--space-lg);
+  background: var(--color-bg); border-top: 1px solid var(--color-border);
+}
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs {
+  display: flex; background: var(--color-bg-secondary); border-radius: var(--radius-lg);
+  padding: 3px; margin-bottom: var(--space-md); gap: 2px;
+}
+.tab {
+  flex: 1; padding: 8px var(--space-sm); font-size: var(--font-size-sm); font-weight: 600;
+  color: var(--color-text-muted); cursor: pointer; border-radius: var(--radius-md);
+  text-align: center; transition: all 0.2s; touch-action: manipulation; user-select: none;
+}
+.tab.active { color: var(--color-primary); background: var(--color-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+/* ── Log Entry ──────────────────────────────────────────── */
+.log-entry {
+  padding: var(--space-md); border-radius: var(--radius-xl); border: 1px solid var(--color-border);
+  margin-bottom: var(--space-sm); background: var(--color-bg); box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.log-entry-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.log-entry-title { font-weight: 700; font-size: var(--font-size-base); flex: 1; margin-right: var(--space-sm); line-height: 1.4; }
+.log-entry-meta { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <div class="nav-item active" data-route="home">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" data-route="log">
+      <span class="nav-icon">📋</span>
+      <span>Log</span>
+    </div>
+    <button class="fab" id="fabBtn" aria-label="Tambah baru">+</button>
+    <div class="nav-item" data-route="journal">
+      <span class="nav-icon">📓</span>
+      <span>Jurnal</span>
+    </div>
+    <div class="nav-item" data-route="goals">
+      <span class="nav-icon">🎯</span>
+      <span>Goals</span>
+    </div>
+  </nav>
+
+  <div class="fab-sheet" id="fabSheet">
+    <div class="fab-option" data-action="log-kerja">
+      <span class="fab-option-icon">💼</span>
+      <div>
+        <p class="fab-option-name">Log Kerja</p>
+        <p class="fab-option-sub">Catat task atau sesi kerja</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="log-aktivitas">
+      <span class="fab-option-icon">🏃</span>
+      <div>
+        <p class="fab-option-name">Log Aktivitas</p>
+        <p class="fab-option-sub">Olahraga, baca buku, tidur…</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="tulis-jurnal">
+      <span class="fab-option-icon">📝</span>
+      <div>
+        <p class="fab-option-name">Tulis Jurnal</p>
+        <p class="fab-option-sub">Refleksi dan catatan bebas</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="review">
+      <span class="fab-option-icon">📊</span>
+      <div>
+        <p class="fab-option-name">Weekly Review</p>
+        <p class="fab-option-sub">Rekap & planning mingguan</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="insights">
+      <span class="fab-option-icon">📈</span>
+      <div>
+        <p class="fab-option-name">Insights</p>
+        <p class="fab-option-sub">Charts & analisis 4 minggu</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="setelan">
+      <span class="fab-option-icon">⚙️</span>
+      <div>
+        <p class="fab-option-name">Setelan</p>
+        <p class="fab-option-sub">Profil, tampilan, data</p>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+
+  <!-- Dexie.js CDN -->
+  <script src="https://unpkg.com/dexie/dist/dexie.min.js"></script>
+
+  <script>
+// ══════════════════════════════════════════════
+// CONSTANTS
+// ══════════════════════════════════════════════
+const WORK_TYPES = ['Kantor', 'Side Project']
+const STATUS_OPTIONS = ['Todo', 'In Progress', 'Done', 'Cancelled']
+const PRIORITY_OPTIONS = ['High', 'Medium', 'Low']
+const COMPLETION_OPTIONS = ['Full', 'Partial', 'Skipped']
+const GOAL_TYPES = ['Work', 'Habit', 'Personal']
+const DEFAULT_WORK_CATEGORIES = ['Coding', 'Meeting', 'Admin', 'Riset', 'Desain', 'Marketing', 'Lainnya']
+const DEFAULT_ACTIVITY_TYPES = ['Olahraga', 'Baca Buku', 'Tidur', 'Belajar', 'Sosial', 'Lainnya']
+const MOOD_EMOJIS = ['😞', '😕', '😐', '🙂', '😄']
+const JOURNAL_PROMPTS = [
+  'Apa satu hal kecil yang membuatmu bangga hari ini, sekecil apapun?',
+  'Apa yang menguras energimu hari ini, dan apa yang mengisinya kembali?',
+  'Satu keputusan terbaik yang kamu ambil hari ini?',
+  'Jika hari ini diulang, satu hal apa yang ingin kamu ubah?',
+  'Apa yang ingin kamu ingat dari hari ini, 1 tahun ke depan?',
+  'Siapa yang membuatmu merasa lebih baik hari ini, dan mengapa?',
+  'Apa satu hal yang kamu pelajari hari ini — dari pekerjaan, orang, atau dirimu sendiri?',
+]
+const DEFAULT_SETTINGS = {
+  userName: '', targetHoursPerWeek: 40,
+  habitBaseline: { olahraga: 3, bacaBuku: 5, tidur: 8 },
+  workCategories: DEFAULT_WORK_CATEGORIES,
+  activityTypes: DEFAULT_ACTIVITY_TYPES,
+  reminderMorning: false, reminderEvening: false,
+  reminderMorningTime: '08:00', reminderEveningTime: '21:00',
+  onboardingDone: false,
+}
+function getTodayPrompt() {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), 0, 0)
+  const dayOfYear = Math.floor((now - start) / 86400000)
+  return JOURNAL_PROMPTS[dayOfYear % JOURNAL_PROMPTS.length]
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+function toDateStr(date) {
+  const d = new Date(date)
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+}
+function fromDateStr(str) {
+  const p = str.split('-'); return new Date(p[0], p[1]-1, p[2])
+}
+function weekStart(date) {
+  const d = new Date(date); const day = d.getDay()
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day)); d.setHours(0,0,0,0); return d
+}
+function weekEnd(date) {
+  const s = weekStart(date); s.setDate(s.getDate()+6); s.setHours(23,59,59,999); return s
+}
+function isSameDay(d1, d2) { return toDateStr(d1) === toDateStr(d2) }
+function daysBetween(d1, d2) {
+  const a = new Date(d1); const b = new Date(d2)
+  a.setHours(0,0,0,0); b.setHours(0,0,0,0)
+  return Math.abs(Math.round((b-a)/86400000))
+}
+function formatDate(date) {
+  const d = new Date(date)
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu']
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des']
+  return days[d.getDay()] + ', ' + d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear()
+}
+function formatDateShort(date) {
+  const d = new Date(date)
+  const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des']
+  return d.getDate() + ' ' + months[d.getMonth()]
+}
+function formatHours(hours) {
+  const h = Math.floor(hours); const m = Math.round((hours-h)*60)
+  if (h===0) return m+'m'; if (m===0) return h+'j'; return h+'j '+m+'m'
+}
+function today() { return toDateStr(new Date()) }
+
+// ══════════════════════════════════════════════
+// DATABASE (Dexie)
+// ══════════════════════════════════════════════
+const db = new Dexie('PersonalTrackerDB')
+db.version(1).stores({
+  worklog:      '++id, date, workType, project, status, category',
+  activitylog:  '++id, date, activityType, completion',
+  goals:        '++id, type, status, endDate',
+  journal:      '++id, date, mood, *tags',
+  weeklyreview: '++id, weekStart',
+  settings:     'key',
+})
+
+// ── DB helpers ──
+async function saveWorklog(e) { return e.id ? (await db.worklog.put(e), e.id) : db.worklog.add(e) }
+async function getWorklogByDate(d) { return db.worklog.where('date').equals(d).toArray() }
+async function getWorklogByDateRange(s,e) { return db.worklog.where('date').between(s,e,true,true).toArray() }
+async function deleteWorklog(id) { return db.worklog.delete(id) }
+
+async function saveActivity(e) { return e.id ? (await db.activitylog.put(e), e.id) : db.activitylog.add(e) }
+async function getActivityByDate(d) { return db.activitylog.where('date').equals(d).toArray() }
+async function getActivityByDateRange(s,e) { return db.activitylog.where('date').between(s,e,true,true).toArray() }
+async function deleteActivity(id) { return db.activitylog.delete(id) }
+
+async function saveGoal(g) { return g.id ? (await db.goals.put(g), g.id) : db.goals.add(g) }
+async function getAllGoals() { return db.goals.toArray() }
+async function getActiveGoals() { return db.goals.where('status').noneOf(['Achieved','Failed']).toArray() }
+async function deleteGoal(id) { return db.goals.delete(id) }
+
+async function saveJournal(e) { return e.id ? (await db.journal.put(e), e.id) : db.journal.add(e) }
+async function getJournalByDate(d) { return db.journal.where('date').equals(d).first() }
+async function deleteJournal(id) { return db.journal.delete(id) }
+
+async function saveReview(r) { return r.id ? (await db.weeklyreview.put(r), r.id) : db.weeklyreview.add(r) }
+async function getReviewByWeekStart(w) { return db.weeklyreview.where('weekStart').equals(w).first() }
+
+// ══════════════════════════════════════════════
+// FORMULA ENGINE
+// ══════════════════════════════════════════════
+const Formula = {
+  weekStart, weekEnd, toDateStr, fromDateStr, isSameDay, daysBetween,
+
+  async sumHours(f) {
+    f = f||{}; let q = db.worklog.toCollection()
+    if (f.startDate && f.endDate) q = db.worklog.where('date').between(f.startDate,f.endDate,true,true)
+    const entries = await q.toArray()
+    return entries.filter(function(e) {
+      if (f.workType && e.workType!==f.workType) return false
+      if (f.project && e.project!==f.project) return false
+      if (f.status && e.status!==f.status) return false
+      return true
+    }).reduce(function(s,e){ return s+(e.hoursSpent||0) },0)
+  },
+
+  async countTasks(f) {
+    f = f||{}; let q = db.worklog.toCollection()
+    if (f.startDate && f.endDate) q = db.worklog.where('date').between(f.startDate,f.endDate,true,true)
+    const entries = await q.toArray()
+    return entries.filter(function(e) {
+      if (f.status && e.status!==f.status) return false
+      return true
+    }).length
+  },
+
+  async avgEnergy(f) {
+    f = f||{}; let q = db.worklog.toCollection()
+    if (f.startDate && f.endDate) q = db.worklog.where('date').between(f.startDate,f.endDate,true,true)
+    const entries = (await q.toArray()).filter(function(e){ return e.energy })
+    if (!entries.length) return 0
+    return entries.reduce(function(s,e){ return s+e.energy },0)/entries.length
+  },
+
+  async countActivities(type, startDate, endDate, completion) {
+    const entries = await db.activitylog.where('date').between(startDate,endDate,true,true).toArray()
+    return entries.filter(function(e) {
+      if (type && e.activityType!==type) return false
+      if (completion && e.completion!==completion) return false
+      return true
+    }).length
+  },
+
+  async avgMood(startDate, endDate) {
+    const entries = await db.journal.where('date').between(startDate,endDate,true,true).toArray()
+    const m = entries.filter(function(e){ return e.mood })
+    if (!m.length) return 0
+    return m.reduce(function(s,e){ return s+e.mood },0)/m.length
+  },
+
+  async goalCurrentValue(goal) {
+    if (goal.type==='Work') return this.sumHours({startDate:goal.startDate,endDate:goal.endDate,project:goal.goalName})
+    if (goal.type==='Habit') return this.countActivities(goal.goalName,goal.startDate,goal.endDate,'Full')
+    return goal.manualValue||0
+  },
+
+  async goalPct(goal) {
+    const cur = await this.goalCurrentValue(goal)
+    if (!goal.targetValue) return 0
+    return Math.min(cur/goal.targetValue,1)
+  },
+
+  async goalStatus(goal) {
+    const pct = await this.goalPct(goal)
+    const now = toDateStr(new Date())
+    if (pct>=1) return 'Achieved'
+    if (goal.endDate<now) return 'Failed'
+    const total = daysBetween(goal.startDate,goal.endDate)
+    const elapsed = daysBetween(goal.startDate,now)
+    const exp = total>0 ? elapsed/total : 0
+    return pct>=exp*0.8 ? 'On Track' : 'Behind'
+  },
+
+  async weeklyKPI(mondayDate) {
+    const start = toDateStr(mondayDate||weekStart(new Date()))
+    const endD = new Date(fromDateStr(start)); endD.setDate(endD.getDate()+6)
+    const end = toDateStr(endD)
+    const [totalHours,taskDone,taskTotal,avgEnergy,activitiesFull,avgMood,hoursKantor,hoursSideProject] = await Promise.all([
+      this.sumHours({startDate:start,endDate:end}),
+      this.countTasks({startDate:start,endDate:end,status:'Done'}),
+      this.countTasks({startDate:start,endDate:end}),
+      this.avgEnergy({startDate:start,endDate:end}),
+      this.countActivities(null,start,end,'Full'),
+      this.avgMood(start,end),
+      this.sumHours({startDate:start,endDate:end,workType:'Kantor'}),
+      this.sumHours({startDate:start,endDate:end,workType:'Side Project'}),
+    ])
+    return {totalHours,taskDone,taskTotal,completionRate:taskTotal>0?taskDone/taskTotal:0,avgEnergy,activitiesFull,avgMood,hoursKantor,hoursSideProject}
+  },
+
+  async streak() {
+    let streak=0; const cur = new Date(); cur.setHours(0,0,0,0)
+    while(true) {
+      const d = toDateStr(cur)
+      const [w,a,j] = await Promise.all([
+        db.worklog.where('date').equals(d).count(),
+        db.activitylog.where('date').equals(d).count(),
+        db.journal.where('date').equals(d).count(),
+      ])
+      if (w>0||a>0||j>0) { streak++; cur.setDate(cur.getDate()-1) } else break
+    }
+    return streak
+  },
+
+  async daysWithEntries(year, month) {
+    const s = toDateStr(new Date(year,month,1))
+    const e = toDateStr(new Date(year,month+1,0))
+    const [wl,al,jl] = await Promise.all([
+      db.worklog.where('date').between(s,e,true,true).toArray(),
+      db.activitylog.where('date').between(s,e,true,true).toArray(),
+      db.journal.where('date').between(s,e,true,true).toArray(),
+    ])
+    const result = {}
+    const add = function(d,k) {
+      if (!result[d]) result[d]={hasKerja:false,hasAktivitas:false,hasJournal:false}
+      result[d][k]=true
+    }
+    wl.forEach(function(e){ add(e.date,'hasKerja') })
+    al.forEach(function(e){ add(e.date,'hasAktivitas') })
+    jl.forEach(function(e){ add(e.date,'hasJournal') })
+    return result
+  },
+}
+
+// ══════════════════════════════════════════════
+// ROUTER
+// ══════════════════════════════════════════════
+const routes = {}
+function on(name, fn) { routes[name] = fn }
+function navigate(name) { window.location.hash = name }
+function initRouter() {
+  window.addEventListener('hashchange', handleRoute)
+  handleRoute()
+}
+function handleRoute() {
+  const hash = window.location.hash.slice(1)||'home'
+  const name = hash.split('/')[0]
+  if (routes[name]) { updateNavActive(name); routes[name](hash) }
+  else navigate('home')
+}
+function updateNavActive(name) {
+  document.querySelectorAll('.nav-item').forEach(function(item) {
+    item.dataset.route===name ? item.classList.add('active') : item.classList.remove('active')
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: ONBOARDING
+// ══════════════════════════════════════════════
+let onbStep = 1
+const onbData = { userName:'', goals:[], targetHoursPerWeek:40, workCategories:[...DEFAULT_WORK_CATEGORIES] }
+
+function renderOnboarding() {
+  document.getElementById('bottomNav').style.display = 'none'
+  document.getElementById('fabBtn').style.display = 'none'
+  renderOnbStep(onbStep)
+}
+
+function stepHdr(s) { return '<p class="onboarding-step">Langkah '+s+' dari 5</p>' }
+function nextBtnHTML(label) { return '<button class="btn btn-primary" id="nextBtn">'+(label||'Lanjut →')+'</button>' }
+
+function renderOnbStep(s) {
+  const fn = {1:renderOnb1,2:renderOnb2,3:renderOnb3,4:renderOnb4,5:renderOnb5}
+  if (fn[s]) fn[s]()
+}
+
+function renderOnb1() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="onboarding-screen">'+stepHdr(1)+
+    '<h1 class="onboarding-title">Halo! Siapa namamu? 👋</h1>'+
+    '<p class="onboarding-sub">Nama ini akan muncul di dashboard harianmu.</p>'+
+    '<div class="form-group"><label class="form-label">Nama kamu</label>'+
+    '<input type="text" id="inputName" placeholder="Contoh: Budi" value="'+onbData.userName+'"></div>'+
+    '</div><div class="onboarding-footer">'+nextBtnHTML()+'</div>'
+  document.getElementById('nextBtn').addEventListener('click', function() {
+    const v = document.getElementById('inputName').value.trim()
+    if (!v) { alert('Masukkan nama kamu dulu ya!'); return }
+    onbData.userName = v; onbStep=2; renderOnbStep(2)
+  })
+}
+
+function renderOnb2() {
+  const opts = ['Tracking kerja harian','Evaluasi produktivitas','Journaling & refleksi']
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="onboarding-screen">'+stepHdr(2)+
+    '<h1 class="onboarding-title">Apa tujuanmu? 🎯</h1>'+
+    '<p class="onboarding-sub">Pilih satu atau lebih. Bisa diubah nanti.</p>'+
+    '<div class="chip-group" id="goalChips">'+
+    opts.map(function(o){ return '<button class="chip'+(onbData.goals.indexOf(o)>=0?' selected':'')+'" data-value="'+o+'">'+o+'</button>' }).join('')+
+    '</div></div><div class="onboarding-footer">'+nextBtnHTML()+'</div>'
+  document.getElementById('goalChips').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    c.classList.toggle('selected')
+    const v=c.dataset.value; const i=onbData.goals.indexOf(v)
+    if(i>=0) onbData.goals.splice(i,1); else onbData.goals.push(v)
+  })
+  document.getElementById('nextBtn').addEventListener('click', function(){ onbStep=3; renderOnbStep(3) })
+}
+
+function renderOnb3() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="onboarding-screen">'+stepHdr(3)+
+    '<h1 class="onboarding-title">Target jam kerja mingguanmu? ⏱️</h1>'+
+    '<p class="onboarding-sub">Dipakai untuk menghitung progress otomatis.</p>'+
+    '<div class="form-group"><label class="form-label">Jam per minggu</label>'+
+    '<input type="number" id="inputHours" value="'+onbData.targetHoursPerWeek+'" min="1" max="100">'+
+    '<p class="form-hint">Default 40 jam (8 jam × 5 hari)</p></div>'+
+    '</div><div class="onboarding-footer">'+nextBtnHTML()+'</div>'
+  document.getElementById('nextBtn').addEventListener('click', function() {
+    const v = parseInt(document.getElementById('inputHours').value)
+    if (!v||v<1) { alert('Masukkan angka yang valid'); return }
+    onbData.targetHoursPerWeek=v; onbStep=4; renderOnbStep(4)
+  })
+}
+
+function renderOnb4() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="onboarding-screen">'+stepHdr(4)+
+    '<h1 class="onboarding-title">Kategori kerja apa yang kamu pakai? 💼</h1>'+
+    '<p class="onboarding-sub">Boleh pilih semua. Bisa diubah di Setelan.</p>'+
+    '<div class="chip-group" id="catChips">'+
+    DEFAULT_WORK_CATEGORIES.map(function(c){ return '<button class="chip'+(onbData.workCategories.indexOf(c)>=0?' selected':'')+'" data-value="'+c+'">'+c+'</button>' }).join('')+
+    '</div></div><div class="onboarding-footer">'+nextBtnHTML()+'</div>'
+  document.getElementById('catChips').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    c.classList.toggle('selected')
+    const v=c.dataset.value; const i=onbData.workCategories.indexOf(v)
+    if(i>=0) onbData.workCategories.splice(i,1); else onbData.workCategories.push(v)
+  })
+  document.getElementById('nextBtn').addEventListener('click', function(){ onbStep=5; renderOnbStep(5) })
+}
+
+function renderOnb5() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="onboarding-screen">'+stepHdr(5)+
+    '<h1 class="onboarding-title">Siap, '+onbData.userName+'! 🚀</h1>'+
+    '<p class="onboarding-sub">Semuanya sudah diatur. Bisa diubah kapanpun di Setelan.</p>'+
+    '<div class="card">'+
+    '<p class="card-title">Ringkasan</p>'+
+    '<p>👤 Nama: <strong>'+onbData.userName+'</strong></p>'+
+    '<p style="margin-top:8px">⏱️ Target: <strong>'+onbData.targetHoursPerWeek+' jam/minggu</strong></p>'+
+    '<p style="margin-top:8px">💼 Kategori: <strong>'+onbData.workCategories.join(', ')+'</strong></p>'+
+    '</div></div><div class="onboarding-footer">'+nextBtnHTML('Mulai sekarang! 🎉')+'</div>'
+  document.getElementById('nextBtn').addEventListener('click', async function() {
+    const settings = Object.assign({},DEFAULT_SETTINGS,{
+      userName:onbData.userName,
+      targetHoursPerWeek:onbData.targetHoursPerWeek,
+      workCategories:onbData.workCategories,
+      onboardingDone:true,
+    })
+    for (const key in settings) await db.settings.put({key:key,value:settings[key]})
+    document.getElementById('bottomNav').style.display = 'flex'
+    document.getElementById('fabBtn').style.display = 'flex'
+    navigate('home')
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: HOME
+// ══════════════════════════════════════════════
+async function renderHome() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="loading">Memuat dashboard...</div>'
+  try {
+    const userNameEntry = await db.settings.get('userName')
+    const userName = userNameEntry ? userNameEntry.value : 'Kamu'
+    const streak = await Formula.streak()
+    const kpi = await Formula.weeklyKPI(weekStart(new Date()))
+    const intentionEntry = await db.settings.get('todayIntention')
+    const intention = intentionEntry ? intentionEntry.value : ''
+    const goals = await getAllGoals()
+    const activeGoals = goals.filter(function(g){ return g.status!=='Achieved'&&g.status!=='Failed' }).slice(0,5)
+
+    app.innerHTML =
+      '<div class="screen-header">'+
+      '<div><h2>Halo, '+userName+'! 👋</h2>'+
+      '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm)">'+formatDate(new Date())+'</p></div>'+
+      '<div class="streak-badge">🔥 '+streak+' hari</div>'+
+      '</div>'+
+      '<div class="card" style="margin-bottom:var(--space-md)">'+
+      '<p class="card-title">Niatmu hari ini</p>'+
+      '<input type="text" id="intentionInput" placeholder="Apa yang ingin kamu capai hari ini?" value="'+(intention||'')+'">'+
+      '</div>'+
+      '<div class="kpi-grid">'+
+      '<div class="kpi-card"><div class="kpi-value">'+kpi.totalHours.toFixed(1)+'j</div><div class="kpi-label">Jam kerja minggu ini</div></div>'+
+      '<div class="kpi-card"><div class="kpi-value">'+kpi.taskDone+'/'+kpi.taskTotal+'</div><div class="kpi-label">Task selesai</div></div>'+
+      '<div class="kpi-card"><div class="kpi-value">'+kpi.activitiesFull+'</div><div class="kpi-label">Aktivitas full</div></div>'+
+      '<div class="kpi-card"><div class="kpi-value">'+(kpi.avgMood>0?MOOD_EMOJIS[Math.round(kpi.avgMood)-1]:'—')+'</div><div class="kpi-label">Avg mood</div></div>'+
+      '</div>'+
+      (activeGoals.length>0 ? '<div class="card" id="goalsCard"><p class="card-title">Goals aktif</p><div id="goalsList"></div></div>' : '')+
+      '<div style="height:var(--space-xl)"></div>'
+
+    const ii = document.getElementById('intentionInput')
+    if (ii) ii.addEventListener('change', async function(){ await db.settings.put({key:'todayIntention',value:this.value}) })
+
+    if (activeGoals.length>0) {
+      const list = document.getElementById('goalsList')
+      for (let i=0;i<activeGoals.length;i++) {
+        const g=activeGoals[i]; const pct=await Formula.goalPct(g); const pi=Math.round(pct*100)
+        const div=document.createElement('div'); div.style.marginBottom='var(--space-md)'
+        div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+          '<span style="font-size:var(--font-size-sm);font-weight:600">'+g.goalName+'</span>'+
+          '<span style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+pi+'%</span></div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+pi+'%"></div></div>'
+        list.appendChild(div)
+      }
+    }
+  } catch(err) {
+    app.innerHTML = '<div class="empty-state"><p>Error memuat home: '+err.message+'</p></div>'
+    console.error(err)
+  }
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: LOG (P1 — full form)
+// ══════════════════════════════════════════════
+let logFilter = 'semua' // 'semua' | 'kerja' | 'aktivitas'
+
+async function renderLog(hash) {
+  // Cek apakah ada action dari FAB
+  if (hash === 'log/kerja') { renderFormKerja(); return }
+  if (hash === 'log/aktivitas') { renderFormAktivitas(); return }
+  await renderLogList()
+}
+
+async function renderLogList() {
+  const app = document.getElementById('app')
+  const todayStr = today()
+  const [worklogs, activities] = await Promise.all([
+    getWorklogByDate(todayStr),
+    getActivityByDate(todayStr),
+  ])
+
+  const badgeMap = {'Done':'badge-done','In Progress':'badge-progress','Todo':'badge-todo','Cancelled':'badge-cancel'}
+
+  let all = []
+  if (logFilter==='semua'||logFilter==='kerja')
+    all = all.concat(worklogs.map(function(e){ return Object.assign({_type:'work'},e) }))
+  if (logFilter==='semua'||logFilter==='aktivitas')
+    all = all.concat(activities.map(function(e){ return Object.assign({_type:'activity'},e) }))
+  all.sort(function(a,b){ return (b.id||0)-(a.id||0) })
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<h2 class="screen-title">Log Hari Ini 📋</h2>'+
+    '<span style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+formatDate(new Date())+'</span>'+
+    '</div>'+
+    '<div class="tabs">'+
+    '<div class="tab'+(logFilter==='semua'?' active':'')+'" data-filter="semua">Semua</div>'+
+    '<div class="tab'+(logFilter==='kerja'?' active':'')+'" data-filter="kerja">💼 Kerja</div>'+
+    '<div class="tab'+(logFilter==='aktivitas'?' active':'')+'" data-filter="aktivitas">🏃 Aktivitas</div>'+
+    '</div>'+
+    (all.length===0 ?
+      '<div class="empty-state">'+
+      '<div class="empty-state-icon">📋</div>'+
+      '<p class="empty-state-title">Belum ada log hari ini</p>'+
+      '<p style="color:var(--color-text-muted)">Tekan tombol + di bawah untuk mulai mencatat.</p>'+
+      '</div>'
+    :
+      all.map(function(e) {
+        const isWork = e._type==='work'
+        return '<div class="log-entry" data-id="'+e.id+'" data-type="'+(isWork?'work':'activity')+'">'+
+          '<div class="log-entry-header">'+
+          '<span class="log-entry-title">'+(e.taskDesc||e.activityName||'—')+'</span>'+
+          '<span class="badge '+(isWork?(badgeMap[e.status]||'badge-todo'):'badge-done')+'">'+
+          (isWork?e.status:e.completion)+'</span></div>'+
+          '<div class="log-entry-meta" style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span>'+(isWork?'💼 '+e.workType+' · '+(e.hoursSpent||0)+'j':'🏃 '+e.activityType+' · '+(e.durationMin||0)+'m')+'</span>'+
+          '<button class="delete-btn" data-id="'+e.id+'" data-type="'+(isWork?'work':'activity')+'" style="background:none;border:none;color:var(--color-text-muted);font-size:18px;cursor:pointer;padding:4px">🗑️</button>'+
+          '</div>'+
+          '</div>'
+      }).join('')
+    )
+
+  // Filter tabs
+  app.querySelectorAll('.tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      logFilter = this.dataset.filter
+      renderLogList()
+    })
+  })
+
+  // Delete buttons
+  app.querySelectorAll('.delete-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation()
+      if (!confirm('Hapus log ini?')) return
+      const id = parseInt(this.dataset.id)
+      const type = this.dataset.type
+      if (type==='work') await deleteWorklog(id)
+      else await deleteActivity(id)
+      renderLogList()
+    })
+  })
+}
+
+// ── Form Log Kerja ──────────────────────────────────
+async function renderFormKerja(prefill) {
+  const app = document.getElementById('app')
+  prefill = prefill || {}
+
+  // Ambil kategori dari settings
+  const catEntry = await db.settings.get('workCategories')
+  const categories = catEntry ? catEntry.value : DEFAULT_WORK_CATEGORIES
+
+  let showExtra = false
+
+  function render() {
+    app.innerHTML =
+      '<div class="screen-header">'+
+      '<button id="backBtn" style="font-size:20px;margin-right:8px;background:none;border:none;cursor:pointer;color:var(--color-text)">←</button>'+
+      '<h2 class="screen-title">Log Kerja 💼</h2>'+
+      '</div>'+
+
+      // Tipe kerja
+      '<div class="form-group">'+
+      '<label class="form-label">Tipe kerja</label>'+
+      '<div class="chip-group" id="workTypeChips">'+
+      WORK_TYPES.map(function(t){
+        return '<button class="chip'+(( prefill.workType||'Kantor')===t?' selected':'')+'" data-value="'+t+'">'+t+'</button>'
+      }).join('')+
+      '</div></div>'+
+
+      // Deskripsi task
+      '<div class="form-group">'+
+      '<label class="form-label">Deskripsi task <span style="color:var(--color-danger-text)">*</span></label>'+
+      '<input type="text" id="taskDesc" placeholder="Contoh: Buat halaman login" value="'+(prefill.taskDesc||')')+'">'+
+      '</div>'+
+
+      // Jam
+      '<div class="form-group">'+
+      '<label class="form-label">Jam dihabiskan <span style="color:var(--color-danger-text)">*</span></label>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap" id="hourPresets">'+
+      ['0.5','1','1.5','2','3','4'].map(function(h){
+        return '<button class="chip'+(( prefill.hoursSpent||'')===parseFloat(h)?' selected':'')+'" data-value="'+h+'">'+h+'j</button>'
+      }).join('')+
+      '</div>'+
+      '<input type="number" id="hoursSpent" placeholder="Atau ketik manual (contoh: 2.5)" value="'+(prefill.hoursSpent||'')+'" min="0.25" max="24" step="0.25" style="margin-top:8px">'+
+      '</div>'+
+
+      // Status
+      '<div class="form-group">'+
+      '<label class="form-label">Status <span style="color:var(--color-danger-text)">*</span></label>'+
+      '<div class="chip-group" id="statusChips">'+
+      STATUS_OPTIONS.map(function(s){
+        return '<button class="chip'+((prefill.status||'Done')===s?' selected':'')+'" data-value="'+s+'">'+s+'</button>'
+      }).join('')+
+      '</div></div>'+
+
+      // Kategori
+      '<div class="form-group">'+
+      '<label class="form-label">Kategori</label>'+
+      '<div class="chip-group" id="categoryChips">'+
+      categories.map(function(c){
+        return '<button class="chip"'+((prefill.category||'')===c?' class="chip selected"':'')+' data-value="'+c+'">'+c+'</button>'
+      }).join('')+
+      '</div></div>'+
+
+      // Toggle detail tambahan
+      '<button id="toggleExtra" style="background:none;border:none;color:var(--color-primary);font-size:var(--font-size-sm);cursor:pointer;margin-bottom:var(--space-md);padding:0">'+
+      (showExtra?'▲ Sembunyikan detail':'▼ Tambah detail (opsional)')+
+      '</button>'+
+
+      (showExtra ?
+        '<div id="extraFields">'+
+        '<div class="form-group"><label class="form-label">Nama project</label>'+
+        '<input type="text" id="project" placeholder="Contoh: App Personal Tracker" value="'+(prefill.project||'')+'"></div>'+
+        '<div class="form-group"><label class="form-label">Prioritas</label>'+
+        '<div class="chip-group" id="priorityChips">'+
+        PRIORITY_OPTIONS.map(function(p){ return '<button class="chip" data-value="'+p+'">'+p+'</button>' }).join('')+
+        '</div></div>'+
+        '<div class="form-group"><label class="form-label">Energi (1-5)</label>'+
+        '<div class="mood-selector">'+
+        ['1','2','3','4','5'].map(function(n){
+          return '<button class="mood-btn" data-energy="'+n+'">'+n+'</button>'
+        }).join('')+
+        '</div></div>'+
+        '<div class="form-group"><label class="form-label">Catatan</label>'+
+        '<textarea id="notes" rows="3" placeholder="Catatan bebas...">'+(prefill.notes||'')+'</textarea></div>'+
+        '</div>'
+      : '') +
+
+      '<button class="btn btn-primary" id="saveWorklog" style="margin-top:var(--space-sm)">Simpan Log Kerja</button>'+
+      '<div style="height:var(--space-xl)"></div>'
+
+    // State chips
+    let selectedWorkType = prefill.workType || 'Kantor'
+    let selectedStatus = prefill.status || 'Done'
+    let selectedCategory = prefill.category || ''
+    let selectedPriority = prefill.priority || ''
+    let selectedEnergy = prefill.energy || 0
+
+    function bindChips(groupId, onSelect) {
+      const group = document.getElementById(groupId)
+      if (!group) return
+      group.addEventListener('click', function(e) {
+        const c = e.target.closest('.chip'); if (!c) return
+        group.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+        c.classList.add('selected')
+        onSelect(c.dataset.value)
+      })
+    }
+
+    bindChips('workTypeChips', function(v){ selectedWorkType=v })
+    bindChips('statusChips', function(v){ selectedStatus=v })
+    bindChips('categoryChips', function(v){ selectedCategory=v })
+    if (showExtra) {
+      bindChips('priorityChips', function(v){ selectedPriority=v })
+      app.querySelectorAll('.mood-btn[data-energy]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          selectedEnergy = parseInt(this.dataset.energy)
+          app.querySelectorAll('.mood-btn[data-energy]').forEach(function(b){ b.classList.remove('selected') })
+          this.classList.add('selected')
+        })
+      })
+    }
+
+    // Preset jam
+    document.getElementById('hourPresets').addEventListener('click', function(e) {
+      const c = e.target.closest('.chip'); if (!c) return
+      this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+      c.classList.add('selected')
+      document.getElementById('hoursSpent').value = c.dataset.value
+    })
+
+    // Toggle extra
+    document.getElementById('toggleExtra').addEventListener('click', function() {
+      showExtra = !showExtra; render()
+    })
+
+    // Back
+    document.getElementById('backBtn').addEventListener('click', function() {
+      navigate('log'); renderLogList()
+    })
+
+    // Save
+    document.getElementById('saveWorklog').addEventListener('click', async function() {
+      const taskDesc = document.getElementById('taskDesc').value.trim()
+      const hoursSpent = parseFloat(document.getElementById('hoursSpent').value)
+
+      if (!taskDesc) { alert('Isi deskripsi task dulu!'); return }
+      if (!hoursSpent || hoursSpent <= 0) { alert('Isi jam yang dihabiskan!'); return }
+      if (!selectedStatus) { alert('Pilih status task!'); return }
+
+      const entry = {
+        date: today(),
+        workType: selectedWorkType,
+        taskDesc: taskDesc,
+        hoursSpent: hoursSpent,
+        status: selectedStatus,
+        category: selectedCategory,
+        project: showExtra ? (document.getElementById('project')||{}).value||'' : '',
+        priority: selectedPriority,
+        energy: selectedEnergy||null,
+        notes: showExtra ? (document.getElementById('notes')||{}).value||'' : '',
+      }
+
+      await saveWorklog(entry)
+      navigate('log')
+      await renderLogList()
+    })
+  }
+
+  render()
+}
+
+// ── Form Log Aktivitas ──────────────────────────────
+async function renderFormAktivitas(prefill) {
+  const app = document.getElementById('app')
+  prefill = prefill || {}
+
+  const actEntry = await db.settings.get('activityTypes')
+  const actTypes = actEntry ? actEntry.value : DEFAULT_ACTIVITY_TYPES
+
+  let selectedType = prefill.activityType || ''
+  let selectedCompletion = prefill.completion || 'Full'
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<button id="backBtn" style="font-size:20px;margin-right:8px;background:none;border:none;cursor:pointer;color:var(--color-text)">←</button>'+
+    '<h2 class="screen-title">Log Aktivitas 🏃</h2>'+
+    '</div>'+
+
+    // Tipe aktivitas
+    '<div class="form-group">'+
+    '<label class="form-label">Jenis aktivitas <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<div class="chip-group" id="actTypeChips">'+
+    actTypes.map(function(t){
+      return '<button class="chip'+(selectedType===t?' selected':'')+'" data-value="'+t+'">'+t+'</button>'
+    }).join('')+
+    '</div></div>'+
+
+    // Nama spesifik
+    '<div class="form-group">'+
+    '<label class="form-label">Nama spesifik <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<input type="text" id="activityName" placeholder="Contoh: Lari 5K di GBK" value="'+(prefill.activityName||')')+'">'+
+    '</div>'+
+
+    // Durasi
+    '<div class="form-group">'+
+    '<label class="form-label">Durasi <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap" id="durPresets">'+
+    ['15','30','45','60','90','120'].map(function(m){
+      return '<button class="chip" data-value="'+m+'">'+m+'m</button>'
+    }).join('')+
+    '</div>'+
+    '<input type="number" id="durationMin" placeholder="Atau ketik manual (menit)" value="'+(prefill.durationMin||'')+'" min="1" style="margin-top:8px">'+
+    '</div>'+
+
+    // Completion
+    '<div class="form-group">'+
+    '<label class="form-label">Selesai? <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<div class="chip-group" id="completionChips">'+
+    COMPLETION_OPTIONS.map(function(c){
+      return '<button class="chip'+(selectedCompletion===c?' selected':'')+'" data-value="'+c+'">'+c+'</button>'
+    }).join('')+
+    '</div></div>'+
+
+    // Mood setelah
+    '<div class="form-group">'+
+    '<label class="form-label">Mood setelah aktivitas (opsional)</label>'+
+    '<div class="mood-selector" id="moodAfterSel">'+
+    MOOD_EMOJIS.map(function(em,i){
+      return '<button class="mood-btn" data-mood="'+(i+1)+'">'+em+'</button>'
+    }).join('')+
+    '</div></div>'+
+
+    '<div class="form-group">'+
+    '<label class="form-label">Catatan (opsional)</label>'+
+    '<textarea id="actNotes" rows="3" placeholder="Catatan bebas...">'+(prefill.notes||'')+'</textarea>'+
+    '</div>'+
+
+    '<button class="btn btn-primary" id="saveActivity">Simpan Log Aktivitas</button>'+
+    '<div style="height:var(--space-xl)"></div>'
+
+  let selectedMoodAfter = 0
+
+  // Bind chips
+  document.getElementById('actTypeChips').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+    c.classList.add('selected'); selectedType = c.dataset.value
+  })
+  document.getElementById('completionChips').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+    c.classList.add('selected'); selectedCompletion = c.dataset.value
+  })
+  document.getElementById('durPresets').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+    c.classList.add('selected')
+    document.getElementById('durationMin').value = c.dataset.value
+  })
+  document.getElementById('moodAfterSel').addEventListener('click', function(e) {
+    const b = e.target.closest('.mood-btn'); if (!b) return
+    this.querySelectorAll('.mood-btn').forEach(function(x){ x.classList.remove('selected') })
+    b.classList.add('selected'); selectedMoodAfter = parseInt(b.dataset.mood)
+  })
+
+  document.getElementById('backBtn').addEventListener('click', function() {
+    navigate('log'); renderLogList()
+  })
+
+  document.getElementById('saveActivity').addEventListener('click', async function() {
+    if (!selectedType) { alert('Pilih jenis aktivitas dulu!'); return }
+    const activityName = document.getElementById('activityName').value.trim()
+    const durationMin = parseInt(document.getElementById('durationMin').value)
+    if (!activityName) { alert('Isi nama spesifik aktivitas!'); return }
+    if (!durationMin || durationMin < 1) { alert('Isi durasi aktivitas!'); return }
+
+    await saveActivity({
+      date: today(),
+      activityType: selectedType,
+      activityName: activityName,
+      durationMin: durationMin,
+      completion: selectedCompletion,
+      moodAfter: selectedMoodAfter || null,
+      notes: document.getElementById('actNotes').value || '',
+    })
+    navigate('log')
+    await renderLogList()
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: JOURNAL (P2)
+// ══════════════════════════════════════════════
+let journalTab = 'tulis' // 'tulis' | 'riwayat'
+
+async function renderJournal() {
+  const app = document.getElementById('app')
+  const todayStr = today()
+  const existing = await getJournalByDate(todayStr)
+  const prompt = getTodayPrompt()
+  let selectedMood = existing ? existing.mood : 0
+
+  function renderJournalUI() {
+    const savedLabel = existing ? '✏️ Edit jurnal hari ini' : 'Tulis Jurnal'
+    app.innerHTML =
+      '<div class="screen-header"><h2 class="screen-title">Jurnal Harian 📓</h2></div>'+
+      '<div class="tabs">'+
+      '<div class="tab'+(journalTab==='tulis'?' active':'')+'" id="tabTulis">✏️ Tulis</div>'+
+      '<div class="tab'+(journalTab==='riwayat'?' active':'')+'" id="tabRiwayat">📚 Riwayat</div>'+
+      '</div>'+
+      (journalTab==='tulis' ?
+        // ── Tab Tulis ──
+        '<div class="card" style="margin-bottom:var(--space-md);background:var(--color-journal-pale);border-color:var(--color-journal)">'+
+        '<p class="card-title" style="color:var(--color-journal)">Prompt hari ini 💭</p>'+
+        '<p style="font-style:italic;color:var(--color-text)">"'+prompt+'"</p>'+
+        '</div>'+
+        '<div class="form-group"><label class="form-label">Tulisanmu</label>'+
+        '<textarea id="journalContent" rows="7" placeholder="Tulis bebas, tidak harus menjawab prompt di atas...">'+(existing?existing.content:'')+'</textarea></div>'+
+        '<div class="form-group"><label class="form-label">Mood hari ini</label>'+
+        '<div class="mood-selector">'+
+        MOOD_EMOJIS.map(function(em,i){
+          const v=i+1
+          return '<button class="mood-btn'+(selectedMood===v?' selected':'')+'" data-mood="'+v+'">'+
+            '<span style="font-size:24px">'+em+'</span>'+
+            '<span style="font-size:10px;display:block;margin-top:2px">'+['Buruk','Kurang','Oke','Baik','Luar biasa'][i]+'</span>'+
+            '</button>'
+        }).join('')+
+        '</div></div>'+
+        (existing ? '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-sm)">📝 Sudah ada jurnal hari ini — edit di bawah.</p>' : '')+
+        '<button class="btn btn-primary" id="saveJournal">'+savedLabel+'</button>'+
+        '<div style="height:var(--space-xl)"></div>'
+      :
+        // ── Tab Riwayat ──
+        '<div id="journalHistory"><div class="loading">Memuat riwayat...</div></div>'
+      )
+
+    // Tab switch
+    document.getElementById('tabTulis').addEventListener('click', function(){ journalTab='tulis'; renderJournalUI() })
+    document.getElementById('tabRiwayat').addEventListener('click', function(){ journalTab='riwayat'; renderJournalUI(); loadJournalHistory() })
+
+    if (journalTab==='tulis') {
+      // Mood selector
+      app.querySelectorAll('.mood-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          selectedMood = parseInt(this.dataset.mood)
+          app.querySelectorAll('.mood-btn').forEach(function(b){ b.classList.remove('selected') })
+          this.classList.add('selected')
+        })
+      })
+      // Save
+      document.getElementById('saveJournal').addEventListener('click', async function() {
+        const content = document.getElementById('journalContent').value.trim()
+        if (!content) { alert('Tulis sesuatu dulu ya!'); return }
+        if (!selectedMood) { alert('Pilih mood hari ini dulu!'); return }
+        await saveJournal({id:existing?existing.id:undefined,date:todayStr,content,mood:selectedMood,promptUsed:prompt,sessionType:'free',tags:[]})
+        this.textContent='✅ Tersimpan!'
+        setTimeout(function(){ const b=document.getElementById('saveJournal'); if(b) b.textContent=savedLabel },2000)
+      })
+    }
+  }
+
+  async function loadJournalHistory() {
+    const all = await db.journal.orderBy('date').reverse().toArray()
+    const container = document.getElementById('journalHistory')
+    if (!container) return
+    if (all.length===0) {
+      container.innerHTML='<div class="empty-state"><div class="empty-state-icon">📚</div><p class="empty-state-title">Belum ada jurnal tersimpan</p></div>'
+      return
+    }
+    container.innerHTML = all.map(function(j) {
+      const moodEmoji = j.mood ? MOOD_EMOJIS[j.mood-1] : '—'
+      const preview = j.content.length>120 ? j.content.slice(0,120)+'...' : j.content
+      return '<div class="card" style="margin-bottom:var(--space-sm)">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-xs)">'+
+        '<span style="font-size:var(--font-size-sm);font-weight:600;color:var(--color-text-muted)">'+j.date+'</span>'+
+        '<span style="font-size:20px">'+moodEmoji+'</span>'+
+        '</div>'+
+        '<p style="font-size:var(--font-size-sm);line-height:1.6;color:var(--color-text)">'+preview+'</p>'+
+        '</div>'
+    }).join('')
+  }
+
+  renderJournalUI()
+  if (journalTab==='riwayat') loadJournalHistory()
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: GOALS (P2)
+// ══════════════════════════════════════════════
+let goalsTab = 'aktif'
+
+async function renderGoals(hash) {
+  if (hash === 'goals/tambah') { renderFormGoal(); return }
+  await renderGoalsList()
+}
+
+async function renderGoalsList() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="loading">Memuat goals...</div>'
+
+  const allGoals = await getAllGoals()
+  const statusClass = {'Achieved':'badge-done','On Track':'badge-progress','Behind':'badge-cancel','Failed':'badge-cancel'}
+
+  // Hitung status semua goal dulu
+  const withStatus = []
+  for (let i=0; i<allGoals.length; i++) {
+    const g = allGoals[i]
+    const status = await Formula.goalStatus(g)
+    const pct = await Formula.goalPct(g)
+    withStatus.push(Object.assign({},g,{_status:status,_pct:pct}))
+  }
+
+  const filtered = withStatus.filter(function(g) {
+    if (goalsTab==='aktif') return g._status!=='Achieved' && g._status!=='Failed'
+    if (goalsTab==='selesai') return g._status==='Achieved'
+    return true
+  })
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<h2 class="screen-title">Goals 🎯</h2>'+
+    '<button id="addGoalBtn" style="background:var(--color-primary);color:white;border:none;border-radius:var(--radius-full);padding:6px 16px;font-size:var(--font-size-sm);font-weight:600;cursor:pointer">+ Tambah</button>'+
+    '</div>'+
+    '<div class="tabs">'+
+    '<div class="tab'+(goalsTab==='aktif'?' active':'')+'" data-gtab="aktif">Aktif ('+withStatus.filter(function(g){return g._status!=='Achieved'&&g._status!=='Failed'}).length+')</div>'+
+    '<div class="tab'+(goalsTab==='selesai'?' active':'')+'" data-gtab="selesai">Achieved ✅</div>'+
+    '<div class="tab'+(goalsTab==='semua'?' active':'')+'" data-gtab="semua">Semua</div>'+
+    '</div>'+
+    (filtered.length===0 ?
+      '<div class="empty-state"><div class="empty-state-icon">🎯</div>'+
+      '<p class="empty-state-title">'+(goalsTab==='aktif'?'Tidak ada goals aktif':'Belum ada goals di kategori ini')+'</p>'+
+      '<p style="color:var(--color-text-muted)">Tekan "+ Tambah" untuk membuat goal baru.</p></div>'
+    :
+      filtered.map(function(g) {
+        const pi = Math.round(g._pct*100)
+        const cur = Math.round(g._pct * g.targetValue * 10) / 10
+        return '<div class="card" style="margin-bottom:var(--space-sm)" data-goalid="'+g.id+'">'+
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-xs)">'+
+          '<div style="flex:1;margin-right:8px">'+
+          '<p style="font-weight:700;margin-bottom:2px">'+g.goalName+'</p>'+
+          '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+g.type+' · '+g.period+' · sampai '+g.endDate+'</p>'+
+          '</div>'+
+          '<span class="badge '+(statusClass[g._status]||'badge-todo')+'">'+g._status+'</span>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;margin-bottom:6px">'+
+          '<span style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+cur+' / '+g.targetValue+' '+g.metric+'</span>'+
+          '<span style="font-size:var(--font-size-sm);font-weight:700;color:var(--color-primary)">'+pi+'%</span>'+
+          '</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+pi+'%'+(pi>=100?';background:var(--color-success-text)':'')+'"></div></div>'+
+          (g.whyMatters ? '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-top:var(--space-xs);font-style:italic">💬 '+g.whyMatters+'</p>' : '')+
+          '<div style="display:flex;justify-content:flex-end;gap:var(--space-sm);margin-top:var(--space-sm)">'+
+          '<button class="edit-goal-btn" data-id="'+g.id+'" style="background:none;border:none;color:var(--color-primary);font-size:var(--font-size-sm);cursor:pointer;font-weight:600">✏️ Edit</button>'+
+          '<button class="delete-goal-btn" data-id="'+g.id+'" style="background:none;border:none;color:var(--color-text-muted);font-size:var(--font-size-sm);cursor:pointer">🗑️ Hapus</button>'+
+          '</div>'+
+          '</div>'
+      }).join('')
+    )
+
+  // Tabs
+  app.querySelectorAll('[data-gtab]').forEach(function(tab) {
+    tab.addEventListener('click', function(){ goalsTab=this.dataset.gtab; renderGoalsList() })
+  })
+
+  // Add button
+  document.getElementById('addGoalBtn').addEventListener('click', function(){
+    navigate('goals/tambah'); renderFormGoal()
+  })
+
+  // Edit buttons
+  app.querySelectorAll('.edit-goal-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      const id = parseInt(this.dataset.id)
+      const goal = await db.goals.get(id)
+      if (goal) { navigate('goals/tambah'); renderFormGoal(goal) }
+    })
+  })
+
+  // Delete buttons - goals list
+  app.querySelectorAll('.delete-goal-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      if (!confirm('Hapus goal ini?')) return
+      await deleteGoal(parseInt(this.dataset.id))
+      renderGoalsList()
+    })
+  })
+}
+
+async function renderFormGoal(editGoal) {
+  const app = document.getElementById('app')
+  const isEdit = !!editGoal
+
+  // Cek limit hanya untuk tambah baru
+  if (!isEdit) {
+    const activeCount = (await getAllGoals()).filter(function(g){ return g.status!=='Achieved'&&g.status!=='Failed' }).length
+    if (activeCount >= 10) {
+      app.innerHTML =
+        '<div class="screen-header">'+
+        '<button id="backBtn" style="font-size:20px;margin-right:8px;background:none;border:none;cursor:pointer;color:var(--color-text)">←</button>'+
+        '<h2 class="screen-title">Tambah Goal</h2></div>'+
+        '<div class="card" style="border-color:var(--color-danger-text)">'+
+        '<p style="color:var(--color-danger-text);font-weight:600">⚠️ Maksimal 10 goals aktif</p>'+
+        '<p style="color:var(--color-text-muted);margin-top:8px">Selesaikan atau hapus goal yang ada sebelum menambah yang baru.</p>'+
+        '</div>'
+      document.getElementById('backBtn').addEventListener('click', function(){ navigate('goals'); renderGoalsList() })
+      return
+    }
+  }
+
+  let selectedType = editGoal ? editGoal.type : 'Work'
+  let selectedPeriod = editGoal ? editGoal.period : 'Monthly'
+  const todayStr = today()
+  const endDefault = new Date(); endDefault.setDate(endDefault.getDate()+30)
+  const endDefaultStr = toDateStr(endDefault)
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<button id="backBtn" style="font-size:20px;margin-right:8px;background:none;border:none;cursor:pointer;color:var(--color-text)">←</button>'+
+    '<h2 class="screen-title">'+(isEdit?'Edit Goal ✏️':'Tambah Goal 🎯')+'</h2>'+
+    '</div>'+
+
+    '<div class="form-group"><label class="form-label">Tipe goal <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<div class="chip-group" id="typeChips">'+
+    [['Work','💼'],['Habit','🏃'],['Personal','⭐']].map(function(t){
+      return '<button class="chip'+(selectedType===t[0]?' selected':'')+'" data-value="'+t[0]+'">'+t[1]+' '+t[0]+'</button>'
+    }).join('')+
+    '</div>'+
+    '<p class="form-hint" id="typeHint">Work: dihitung dari jam kerja di project. Habit: dihitung dari log aktivitas. Personal: isi manual.</p>'+
+    '</div>'+
+
+    '<div class="form-group"><label class="form-label">Nama goal <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<input type="text" id="goalName" placeholder="Contoh: Side Project App / Olahraga / Baca Buku" value="'+(editGoal?editGoal.goalName:'')+'">'+
+    '<p class="form-hint">Untuk Work: sama persis dengan nama Project di Log Kerja. Untuk Habit: sama persis dengan Jenis Aktivitas.</p>'+
+    '</div>'+
+
+    '<div class="form-group"><label class="form-label">Kenapa ini penting bagimu?</label>'+
+    '<input type="text" id="whyMatters" placeholder="Motivasimu di balik goal ini..." value="'+(editGoal?editGoal.whyMatters:'')+'">'+
+    '</div>'+
+
+    '<div style="display:flex;gap:var(--space-sm)">'+
+    '<div class="form-group" style="flex:1"><label class="form-label">Target <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<input type="number" id="targetValue" placeholder="Contoh: 20" min="1" value="'+(editGoal?editGoal.targetValue:'')+'">'+
+    '</div>'+
+    '<div class="form-group" style="flex:1"><label class="form-label">Satuan <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<input type="text" id="metric" placeholder="jam / kali / halaman" value="'+(editGoal?editGoal.metric:'')+'">'+
+    '</div>'+
+    '</div>'+
+
+    '<div class="form-group"><label class="form-label">Periode <span style="color:var(--color-danger-text)">*</span></label>'+
+    '<div class="chip-group" id="periodChips">'+
+    ['Daily','Weekly','Monthly'].map(function(p){
+      return '<button class="chip'+(selectedPeriod===p?' selected':'')+'" data-value="'+p+'">'+p+'</button>'
+    }).join('')+
+    '</div>'+
+    '<p class="form-hint" id="periodHint">'+(selectedPeriod==='Daily'?'Target dihitung ulang setiap hari.':selectedPeriod==='Weekly'?'Target dihitung per minggu (Senin–Minggu).':'Target dihitung per bulan.')+'</p>'+
+    '</div>'+
+
+    '<div style="display:flex;gap:var(--space-sm)">'+
+    '<div class="form-group" style="flex:1"><label class="form-label">Mulai</label>'+
+    '<input type="date" id="startDate" value="'+(editGoal?editGoal.startDate:todayStr)+'">'+
+    '</div>'+
+    '<div class="form-group" style="flex:1"><label class="form-label">Target selesai</label>'+
+    '<input type="date" id="endDate" value="'+(editGoal?editGoal.endDate:endDefaultStr)+'">'+
+    '</div>'+
+    '</div>'+
+
+    (isEdit && editGoal.type==='Personal' ?
+      '<div class="form-group"><label class="form-label">Progress saat ini (manual)</label>'+
+      '<input type="number" id="manualValue" placeholder="Contoh: 5" min="0" value="'+(editGoal.manualValue||0)+'">'+
+      '<p class="form-hint">Khusus tipe Personal — isi angka progress terkini kamu.</p>'+
+      '</div>'
+    : '') +
+
+    '<button class="btn btn-primary" id="saveGoal">'+(isEdit?'Simpan Perubahan':'Simpan Goal')+'</button>'+
+    (isEdit ? '<button class="btn btn-secondary" id="cancelEdit" style="margin-top:var(--space-sm)">Batal</button>' : '')+
+    '<div style="height:var(--space-xl)"></div>'
+
+  // Type chips
+  document.getElementById('typeChips').addEventListener('click', function(e) {
+    const c=e.target.closest('.chip'); if(!c) return
+    this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('selected')}); c.classList.add('selected')
+    selectedType=c.dataset.value
+    const hints = {
+      'Work': 'Dihitung otomatis dari total JAM di project dengan nama yang sama di Log Kerja.',
+      'Habit': 'Dihitung otomatis dari jumlah entri FULL di Log Aktivitas dengan jenis yang sama.',
+      'Personal': 'Isi progress secara manual di field "Progress saat ini".',
+    }
+    document.getElementById('typeHint').textContent = hints[selectedType]
+  })
+
+  // Period chips
+  document.getElementById('periodChips').addEventListener('click', function(e) {
+    const c=e.target.closest('.chip'); if(!c) return
+    this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('selected')}); c.classList.add('selected')
+    selectedPeriod=c.dataset.value
+    const hints = {
+      'Daily': 'Target akumulasi dari tanggal mulai hingga selesai (cocok untuk habit harian).',
+      'Weekly': 'Target dihitung per minggu (Senin–Minggu).',
+      'Monthly': 'Target dihitung per bulan.',
+    }
+    document.getElementById('periodHint').textContent = hints[selectedPeriod]
+  })
+
+  document.getElementById('backBtn').addEventListener('click', function(){ navigate('goals'); renderGoalsList() })
+  if (isEdit) {
+    document.getElementById('cancelEdit').addEventListener('click', function(){ navigate('goals'); renderGoalsList() })
+  }
+
+  document.getElementById('saveGoal').addEventListener('click', async function() {
+    const goalName = document.getElementById('goalName').value.trim()
+    const targetValue = parseFloat(document.getElementById('targetValue').value)
+    const metric = document.getElementById('metric').value.trim()
+    const startDate = document.getElementById('startDate').value
+    const endDate = document.getElementById('endDate').value
+
+    if (!goalName) { alert('Isi nama goal!'); return }
+    if (!targetValue||targetValue<=0) { alert('Isi target yang valid!'); return }
+    if (!metric) { alert('Isi satuan (jam/kali/halaman)!'); return }
+    if (!endDate||endDate<=startDate) { alert('Target selesai harus lebih dari tanggal mulai!'); return }
+
+    const manualValueEl = document.getElementById('manualValue')
+    const entry = {
+      id: isEdit ? editGoal.id : undefined,
+      goalName, type:selectedType, metric, targetValue,
+      period:selectedPeriod, startDate, endDate,
+      whyMatters: document.getElementById('whyMatters').value||'',
+      status: editGoal ? editGoal.status : 'On Track',
+      manualValue: manualValueEl ? parseFloat(manualValueEl.value)||0 : (editGoal?editGoal.manualValue:0),
+    }
+
+    await saveGoal(entry)
+    navigate('goals')
+    await renderGoalsList()
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: REVIEW (P3 — Weekly Review lengkap)
+// ══════════════════════════════════════════════
+let reviewOffset = 0 // 0 = minggu ini, -1 = minggu lalu, dst
+
+async function renderReview() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="loading">Memuat review...</div>'
+
+  // Hitung tanggal minggu berdasarkan offset
+  const base = new Date()
+  base.setDate(base.getDate() + reviewOffset * 7)
+  const monday = weekStart(base)
+  const sunday = new Date(monday); sunday.setDate(sunday.getDate() + 6)
+  const mondayStr = toDateStr(monday)
+
+  const kpi = await Formula.weeklyKPI(monday)
+  const targetHoursEntry = await db.settings.get('targetHoursPerWeek')
+  const targetHours = targetHoursEntry ? targetHoursEntry.value : 40
+
+  // Ambil data review yang sudah tersimpan
+  const saved = await getReviewByWeekStart(mondayStr) || {}
+
+  // Hitung completeness review (section B + C)
+  const fields = ['win1','win2','win3','improvement','energySource','task1','task2','task3','habitTarget','intention']
+  const filled = fields.filter(function(f){ return saved[f] && saved[f].trim() }).length
+  const completeness = Math.round((filled / fields.length) * 100)
+
+  // Bar jam per workType
+  const hoursKantor = kpi.hoursKantor || 0
+  const hoursSide = kpi.hoursSideProject || 0
+  const maxBar = Math.max(hoursKantor, hoursSide, 1)
+
+  const isCurrentWeek = reviewOffset === 0
+  const weekLabel = isCurrentWeek ? 'Minggu ini' : (reviewOffset === -1 ? 'Minggu lalu' : formatDateShort(monday)+' – '+formatDateShort(sunday))
+
+  app.innerHTML =
+    // ── Header dengan navigasi minggu ──
+    '<div class="screen-header" style="margin-bottom:var(--space-sm)">'+
+    '<h2 class="screen-title">Weekly Review 📊</h2>'+
+    '</div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md)">'+
+    '<button id="prevWeek" style="background:var(--color-bg-secondary);border:none;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;font-size:16px">←</button>'+
+    '<div style="text-align:center">'+
+    '<p style="font-weight:700;font-size:var(--font-size-base)">'+weekLabel+'</p>'+
+    '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+formatDateShort(monday)+' – '+formatDateShort(sunday)+'</p>'+
+    '</div>'+
+    '<button id="nextWeek" style="background:var(--color-bg-secondary);border:none;border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;font-size:16px;'+(isCurrentWeek?'opacity:0.3;pointer-events:none':'')+'">→</button>'+
+    '</div>'+
+
+    // ── Progress completeness ──
+    '<div style="margin-bottom:var(--space-md)">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
+    '<span style="font-size:var(--font-size-sm);color:var(--color-text-muted)">Kelengkapan review</span>'+
+    '<span style="font-size:var(--font-size-sm);font-weight:700;color:var(--color-primary)">'+completeness+'%</span>'+
+    '</div>'+
+    '<div class="progress-bar"><div class="progress-fill" style="width:'+completeness+'%"></div></div>'+
+    '</div>'+
+
+    // ── Section A: Auto-rekap ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title" style="color:var(--color-primary)">📊 Section A — Rekap Otomatis</p>'+
+    '<div class="kpi-grid" style="margin-bottom:var(--space-md)">'+
+    '<div class="kpi-card"><div class="kpi-value">'+kpi.totalHours.toFixed(1)+'j</div><div class="kpi-label">Total kerja</div></div>'+
+    '<div class="kpi-card"><div class="kpi-value">'+kpi.taskDone+'/'+kpi.taskTotal+'</div><div class="kpi-label">Task selesai</div></div>'+
+    '<div class="kpi-card"><div class="kpi-value">'+kpi.activitiesFull+'</div><div class="kpi-label">Aktivitas full</div></div>'+
+    '<div class="kpi-card"><div class="kpi-value">'+(kpi.avgMood>0?MOOD_EMOJIS[Math.round(kpi.avgMood)-1]:'—')+'</div><div class="kpi-label">Avg mood</div></div>'+
+    '</div>'+
+    // Mini bar chart Kantor vs Side Project
+    '<p style="font-size:var(--font-size-sm);font-weight:600;margin-bottom:var(--space-sm)">Distribusi jam kerja</p>'+
+    '<div style="margin-bottom:8px">'+
+    '<div style="display:flex;justify-content:space-between;font-size:var(--font-size-sm);margin-bottom:3px">'+
+    '<span>💼 Kantor</span><span>'+hoursKantor.toFixed(1)+'j</span></div>'+
+    '<div class="progress-bar"><div class="progress-fill" style="width:'+Math.round((hoursKantor/maxBar)*100)+'%;background:#1F4E79"></div></div>'+
+    '</div>'+
+    '<div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:var(--font-size-sm);margin-bottom:3px">'+
+    '<span>🚀 Side Project</span><span>'+hoursSide.toFixed(1)+'j</span></div>'+
+    '<div class="progress-bar"><div class="progress-fill" style="width:'+Math.round((hoursSide/maxBar)*100)+'%;background:#3C3489"></div></div>'+
+    '</div>'+
+    '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-top:var(--space-sm)">Target: '+targetHours+'j · '+
+    (kpi.totalHours>=targetHours ? '✅ Target tercapai!' : '⚡ Kurang '+(targetHours-kpi.totalHours).toFixed(1)+'j dari target')+
+    '</p>'+
+    '</div>'+
+
+    // ── Section B: Refleksi Manual ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title" style="color:var(--color-journal)">✍️ Section B — Refleksi</p>'+
+    '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-md)">3 hal yang berjalan baik minggu ini:</p>'+
+    '<div class="form-group"><input type="text" id="win1" placeholder="Win #1..." value="'+(saved.win1||'')+'"></div>'+
+    '<div class="form-group"><input type="text" id="win2" placeholder="Win #2..." value="'+(saved.win2||'')+'"></div>'+
+    '<div class="form-group" style="margin-bottom:var(--space-md)"><input type="text" id="win3" placeholder="Win #3..." value="'+(saved.win3||'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">Satu hal yang ingin diperbaiki</label>'+
+    '<input type="text" id="improvement" placeholder="Apa yang bisa lebih baik?" value="'+(saved.improvement||'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">Apa yang memberi energi minggu ini?</label>'+
+    '<input type="text" id="energySource" placeholder="Orang, aktivitas, atau momen..." value="'+(saved.energySource||'')+'"></div>'+
+    '</div>'+
+
+    // ── Section C: Planning ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title" style="color:var(--color-activity)">🗓️ Section C — Planning Minggu Depan</p>'+
+    '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-md)">Top 3 task minggu depan:</p>'+
+    '<div class="form-group"><input type="text" id="task1" placeholder="Task #1..." value="'+(saved.task1||'')+'"></div>'+
+    '<div class="form-group"><input type="text" id="task2" placeholder="Task #2..." value="'+(saved.task2||'')+'"></div>'+
+    '<div class="form-group" style="margin-bottom:var(--space-md)"><input type="text" id="task3" placeholder="Task #3..." value="'+(saved.task3||'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">Target habit minggu depan</label>'+
+    '<input type="text" id="habitTarget" placeholder="Contoh: Olahraga 4x, Tidur 7j/hari..." value="'+(saved.habitTarget||'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">Intention / fokus minggu depan</label>'+
+    '<input type="text" id="intention" placeholder="Satu kalimat yang merangkum fokusmu..." value="'+(saved.intention||'')+'"></div>'+
+    '</div>'+
+
+    '<button class="btn btn-primary" id="saveReview">💾 Simpan Review</button>'+
+    '<div style="height:var(--space-xl)"></div>'
+
+  // Navigasi minggu
+  document.getElementById('prevWeek').addEventListener('click', function() {
+    reviewOffset--; renderReview()
+  })
+  document.getElementById('nextWeek').addEventListener('click', function() {
+    if (reviewOffset < 0) { reviewOffset++; renderReview() }
+  })
+
+  // Simpan review
+  document.getElementById('saveReview').addEventListener('click', async function() {
+    const fields = ['win1','win2','win3','improvement','energySource','task1','task2','task3','habitTarget','intention']
+    const data = { id: saved.id, weekStart: mondayStr }
+    fields.forEach(function(f) {
+      const el = document.getElementById(f)
+      data[f] = el ? el.value.trim() : ''
+    })
+    await saveReview(data)
+    this.textContent = '✅ Tersimpan!'
+    setTimeout(function() {
+      const btn = document.getElementById('saveReview')
+      if (btn) btn.textContent = '💾 Simpan Review'
+    }, 2000)
+    // Update completeness bar
+    const filled2 = fields.filter(function(f){ return data[f] }).length
+    const pct2 = Math.round((filled2/fields.length)*100)
+    const fill = document.querySelector('.progress-fill')
+    const label = document.querySelector('.progress-fill')
+    if (fill) fill.style.width = pct2+'%'
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: SETTINGS
+// ══════════════════════════════════════════════
+async function renderSettings() {
+  const app = document.getElementById('app')
+  const allS = await db.settings.toArray()
+  const s = {}; allS.forEach(function(x){ s[x.key]=x.value })
+
+  app.innerHTML =
+    '<div class="screen-header"><h2 class="screen-title">Setelan ⚙️</h2></div>'+
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">Profil</p>'+
+    '<div class="form-group"><label class="form-label">Nama</label>'+
+    '<input type="text" id="sName" value="'+(s.userName||'')+'"></div>'+
+    '<div class="form-group"><label class="form-label">Target jam kerja per minggu</label>'+
+    '<input type="number" id="sHours" value="'+(s.targetHoursPerWeek||40)+'" min="1" max="100"></div>'+
+    '<button class="btn btn-primary" id="saveSettings">Simpan Profil</button>'+
+    '</div>'+
+
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">Tampilan</p>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between">'+
+    '<div>'+
+    '<p style="font-weight:600">Mode Tampilan</p>'+
+    '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted)" id="themeLabel">'+getThemeLabel()+'</p>'+
+    '</div>'+
+    '<div class="chip-group" id="themeChips">'+
+    '<button class="chip'+(getCurrentTheme()==='light'?' selected':'')+'" data-theme="light">☀️ Light</button>'+
+    '<button class="chip'+(getCurrentTheme()==='auto'?' selected':'')+'" data-theme="auto">🌓 Auto</button>'+
+    '<button class="chip'+(getCurrentTheme()==='dark'?' selected':'')+'" data-theme="dark">🌙 Dark</button>'+
+    '</div>'+
+    '</div>'+
+    '</div>'+
+
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">Data</p>'+
+    '<button class="btn btn-secondary" id="exportBtn" style="margin-bottom:var(--space-sm)">📤 Export JSON (backup)</button>'+
+    '<button class="btn btn-secondary" id="importTrigger" style="margin-bottom:var(--space-sm)">📥 Import JSON (restore)</button>'+
+    '<input type="file" id="importFile" accept=".json" style="display:none">'+
+    '<div class="divider"></div>'+
+    '<button class="btn btn-danger" id="clearBtn">🗑️ Hapus semua data</button>'+
+    '</div>'+
+    '<p style="text-align:center;color:var(--color-text-muted);font-size:var(--font-size-sm);margin-top:var(--space-lg)">Personal Tracker v1.0</p>'+
+    '<div style="height:var(--space-xl)"></div>'
+
+  document.getElementById('saveSettings').addEventListener('click', async function() {
+    await db.settings.put({key:'userName',value:document.getElementById('sName').value.trim()})
+    await db.settings.put({key:'targetHoursPerWeek',value:parseInt(document.getElementById('sHours').value)})
+    this.textContent='✅ Tersimpan!'; const btn=this
+    setTimeout(function(){ btn.textContent='Simpan Profil' },2000)
+  })
+
+  document.getElementById('themeChips').addEventListener('click', function(e) {
+    const c = e.target.closest('.chip'); if (!c) return
+    this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+    c.classList.add('selected')
+    applyTheme(c.dataset.theme)
+    const lbl = document.getElementById('themeLabel')
+    if (lbl) lbl.textContent = getThemeLabel()
+  })
+
+  document.getElementById('exportBtn').addEventListener('click', async function() {
+    const data = {
+      worklog:await db.worklog.toArray(), activitylog:await db.activitylog.toArray(),
+      goals:await db.goals.toArray(), journal:await db.journal.toArray(),
+      weeklyreview:await db.weeklyreview.toArray(), settings:await db.settings.toArray(),
+      exportedAt:new Date().toISOString()
+    }
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'})
+    const url=URL.createObjectURL(blob); const a=document.createElement('a')
+    a.href=url; a.download='personal-tracker-backup-'+today()+'.json'; a.click(); URL.revokeObjectURL(url)
+  })
+
+  document.getElementById('importTrigger').addEventListener('click', function(){ document.getElementById('importFile').click() })
+  document.getElementById('importFile').addEventListener('change', async function(e) {
+    const file=e.target.files[0]; if(!file) return
+    try {
+      const data=JSON.parse(await file.text())
+      if(data.worklog) await db.worklog.bulkPut(data.worklog)
+      if(data.activitylog) await db.activitylog.bulkPut(data.activitylog)
+      if(data.goals) await db.goals.bulkPut(data.goals)
+      if(data.journal) await db.journal.bulkPut(data.journal)
+      if(data.weeklyreview) await db.weeklyreview.bulkPut(data.weeklyreview)
+      if(data.settings) await db.settings.bulkPut(data.settings)
+      alert('✅ Data berhasil di-restore!'); window.location.reload()
+    } catch(err) { alert('❌ File tidak valid.') }
+  })
+
+  document.getElementById('clearBtn').addEventListener('click', async function() {
+    if (!confirm('⚠️ Yakin hapus semua data? Tidak bisa dibatalkan.')) return
+    await Promise.all([db.worklog.clear(),db.activitylog.clear(),db.goals.clear(),db.journal.clear(),db.weeklyreview.clear(),db.settings.clear()])
+    alert('Semua data dihapus.'); window.location.reload()
+  })
+}
+
+// ══════════════════════════════════════════════
+// FAB
+// ══════════════════════════════════════════════
+const fabBtn = document.getElementById('fabBtn')
+const fabSheet = document.getElementById('fabSheet')
+const overlay = document.getElementById('overlay')
+
+function openFAB() { fabBtn.classList.add('open'); fabSheet.classList.add('open'); overlay.classList.add('open') }
+function closeFAB() { fabBtn.classList.remove('open'); fabSheet.classList.remove('open'); overlay.classList.remove('open') }
+
+fabBtn.addEventListener('click', function(){ fabSheet.classList.contains('open')?closeFAB():openFAB() })
+overlay.addEventListener('click', closeFAB)
+fabSheet.addEventListener('click', function(e) {
+  const opt=e.target.closest('.fab-option'); if(!opt) return
+  closeFAB()
+  const action=opt.dataset.action
+  if (action==='tulis-jurnal') navigate('journal')
+  else if (action==='log-kerja') { navigate('log/kerja'); renderFormKerja() }
+  else if (action==='log-aktivitas') { navigate('log/aktivitas'); renderFormAktivitas() }
+  else if (action==='tambah-goal') { navigate('goals/tambah'); renderFormGoal() }
+  else if (action==='review') navigate('review')
+  else if (action==='insights') navigate('insights')
+  else if (action==='setelan') navigate('settings')
+  else if (action==='jurnal') navigate('journal')
+})
+
+document.getElementById('bottomNav').addEventListener('click', function(e) {
+  const item=e.target.closest('.nav-item'); if(!item||!item.dataset.route) return
+  navigate(item.dataset.route)
+})
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// SCREEN: INSIGHTS (P4 — Charts & Auto-insight)
+// ══════════════════════════════════════════════
+let insightsOffset = 0 // 0=minggu ini, -1=minggu lalu, dst
+
+async function renderInsights() {
+  const app = document.getElementById('app')
+  app.innerHTML = '<div class="loading">Memuat insights...</div>'
+
+  // Hitung rentang 4 minggu terakhir untuk trend
+  const weeks = []
+  for (let i = -3; i <= 0; i++) {
+    const base = new Date(); base.setDate(base.getDate() + i*7)
+    const mon = weekStart(base)
+    const sun = new Date(mon); sun.setDate(sun.getDate()+6)
+    weeks.push({ monday: mon, label: formatDateShort(mon) })
+  }
+
+  // Ambil KPI semua minggu sekaligus
+  const kpiList = await Promise.all(weeks.map(function(w){ return Formula.weeklyKPI(w.monday) }))
+  const thisKpi = kpiList[3]
+  const lastKpi = kpiList[2]
+
+  // Data untuk chart jam per kategori (minggu ini)
+  const mon = weekStart(new Date())
+  const monStr = toDateStr(mon)
+  const sunD = new Date(mon); sunD.setDate(sunD.getDate()+6)
+  const sunStr = toDateStr(sunD)
+  const catHours = await Formula.hoursPerCategory(monStr, sunStr)
+  const catEntries = Object.entries(catHours).filter(function(e){ return e[1]>0 }).sort(function(a,b){ return b[1]-a[1] })
+  const maxCat = catEntries.length>0 ? catEntries[0][1] : 1
+
+  // Auto-insights
+  const insights = []
+  if (thisKpi.totalHours > lastKpi.totalHours + 1) {
+    insights.push('📈 Jam kerja naik '+( thisKpi.totalHours - lastKpi.totalHours).toFixed(1)+'j dari minggu lalu — bagus!')
+  } else if (thisKpi.totalHours < lastKpi.totalHours - 1) {
+    insights.push('📉 Jam kerja turun '+(lastKpi.totalHours - thisKpi.totalHours).toFixed(1)+'j dari minggu lalu.')
+  }
+  if (thisKpi.completionRate >= 0.8) insights.push('✅ Task completion rate '+Math.round(thisKpi.completionRate*100)+'% — minggu yang produktif!')
+  else if (thisKpi.completionRate < 0.5 && thisKpi.taskTotal > 0) insights.push('⚠️ Baru '+Math.round(thisKpi.completionRate*100)+'% task selesai — coba kurangi jumlah task minggu depan.')
+  if (thisKpi.avgMood >= 4) insights.push('😄 Mood rata-rata '+thisKpi.avgMood.toFixed(1)+'/5 minggu ini — kamu sedang dalam kondisi baik!')
+  else if (thisKpi.avgMood > 0 && thisKpi.avgMood < 3) insights.push('😕 Mood rata-rata '+thisKpi.avgMood.toFixed(1)+'/5 — perhatikan keseimbangan kerja dan istirahat.')
+  if (thisKpi.hoursSideProject > thisKpi.hoursKantor && thisKpi.hoursSideProject > 0) insights.push('🚀 Minggu ini kamu lebih banyak di Side Project ('+thisKpi.hoursSideProject.toFixed(1)+'j) dari Kantor ('+thisKpi.hoursKantor.toFixed(1)+'j).')
+  if (catEntries.length > 0) insights.push('🏆 Kategori terbanyak minggu ini: '+catEntries[0][0]+' ('+catEntries[0][1].toFixed(1)+'j).')
+  if (insights.length === 0) insights.push('📊 Belum cukup data untuk insight. Terus catat aktivitasmu!')
+
+  // Mood trend data (4 minggu)
+  const moodTrend = kpiList.map(function(k){ return k.avgMood })
+  const maxMood = 5
+  const chartH = 80
+  const chartW = 100 // persen
+
+  app.innerHTML =
+    '<div class="screen-header"><h2 class="screen-title">Insights 📈</h2></div>'+
+
+    // ── Auto Insights ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">💡 Auto-Insight Minggu Ini</p>'+
+    insights.map(function(ins){
+      return '<div style="padding:var(--space-sm) 0;border-bottom:1px solid var(--color-border);font-size:var(--font-size-sm);line-height:1.6">'+ins+'</div>'
+    }).join('')+
+    '</div>'+
+
+    // ── Chart: Jam per Kategori ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">⏱️ Jam per Kategori — Minggu Ini</p>'+
+    (catEntries.length===0 ?
+      '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm)">Belum ada data log kerja minggu ini.</p>'
+    :
+      catEntries.map(function(e) {
+        const pct = Math.round((e[1]/maxCat)*100)
+        return '<div style="margin-bottom:var(--space-sm)">'+
+          '<div style="display:flex;justify-content:space-between;font-size:var(--font-size-sm);margin-bottom:3px">'+
+          '<span style="font-weight:600">'+e[0]+'</span>'+
+          '<span style="color:var(--color-text-muted)">'+e[1].toFixed(1)+'j</span>'+
+          '</div>'+
+          '<div class="progress-bar"><div class="progress-fill" style="width:'+pct+'%"></div></div>'+
+          '</div>'
+      }).join('')
+    )+
+    '</div>'+
+
+    // ── Chart: Mood Trend 4 Minggu ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">😊 Mood Trend — 4 Minggu Terakhir</p>'+
+    '<div style="display:flex;align-items:flex-end;justify-content:space-around;height:'+chartH+'px;margin-bottom:var(--space-sm);gap:8px">'+
+    moodTrend.map(function(mood, i) {
+      const h = mood > 0 ? Math.round((mood/maxMood)*chartH) : 4
+      const col = mood >= 4 ? 'var(--color-success-text)' : mood >= 3 ? 'var(--color-warning-text)' : mood > 0 ? 'var(--color-danger-text)' : 'var(--color-border)'
+      return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+        '<span style="font-size:10px;color:var(--color-text-muted)">'+(mood>0?mood.toFixed(1):'—')+'</span>'+
+        '<div style="width:100%;height:'+h+'px;background:'+col+';border-radius:var(--radius-sm);transition:height 0.3s"></div>'+
+        '<span style="font-size:10px;color:var(--color-text-muted)">'+weeks[i].label+'</span>'+
+        '</div>'
+    }).join('')+
+    '</div>'+
+    '</div>'+
+
+    // ── Chart: Jam Kerja 4 Minggu ──
+    '<div class="card" style="margin-bottom:var(--space-md)">'+
+    '<p class="card-title">💼 Jam Kerja — 4 Minggu Terakhir</p>'+
+    (function(){
+      const maxH = Math.max.apply(null, kpiList.map(function(k){ return k.totalHours }))
+      const barH = 80
+      return '<div style="display:flex;align-items:flex-end;justify-content:space-around;height:'+barH+'px;margin-bottom:var(--space-sm);gap:8px">'+
+        kpiList.map(function(k,i) {
+          const h = maxH>0 ? Math.round((k.totalHours/maxH)*barH) : 4
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'+
+            '<span style="font-size:10px;color:var(--color-text-muted)">'+k.totalHours.toFixed(1)+'j</span>'+
+            '<div style="width:100%;height:'+h+'px;background:var(--color-primary);border-radius:var(--radius-sm)"></div>'+
+            '<span style="font-size:10px;color:var(--color-text-muted)">'+weeks[i].label+'</span>'+
+            '</div>'
+        }).join('')+
+        '</div>'
+    })()+
+    '</div>'+
+
+    // ── Ringkasan Aktivitas ──
+    (function(){
+      return ''
+    })()+
+
+    '<div style="height:var(--space-xl)"></div>'
+}
+
+on('onboarding', renderOnboarding)
+on('home', renderHome)
+on('log', renderLog)
+on('journal', renderJournal)
+on('goals', renderGoals)
+on('review', renderReview)
+on('insights', renderInsights)
+on('settings', renderSettings)
+
+// ══════════════════════════════════════════════
+// THEME MANAGER
+// ══════════════════════════════════════════════
+function getCurrentTheme() {
+  return localStorage.getItem('theme') || 'auto'
+}
+
+function getThemeLabel() {
+  const t = getCurrentTheme()
+  if (t==='light') return 'Selalu terang'
+  if (t==='dark') return 'Selalu gelap'
+  return 'Ikuti sistem ('+( window.matchMedia('(prefers-color-scheme: dark)').matches ? 'gelap' : 'terang') +')'
+}
+
+function applyTheme(theme) {
+  localStorage.setItem('theme', theme)
+  const html = document.documentElement
+  html.classList.remove('light', 'dark')
+  if (theme === 'light') html.classList.add('light')
+  else if (theme === 'dark') html.classList.add('dark')
+  // 'auto' = tidak ada class, ikuti media query
+}
+
+// Terapkan theme saat app load
+applyTheme(getCurrentTheme())
+
+async function init() {
+  try {
+    const done = await db.settings.get('onboardingDone')
+    if (!done || !done.value) {
+      window.location.hash = 'onboarding'
+      initRouter()
+    } else {
+      initRouter()
+      if (!window.location.hash || window.location.hash==='#') navigate('home')
+    }
+  } catch(err) {
+    console.error('Init error:', err)
+    document.getElementById('app').innerHTML = '<div class="empty-state"><p>Error: '+err.message+'</p></div>'
+  }
+}
+
+init()
+  </script>
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+          .then(function(reg) { console.log('SW registered:', reg.scope) })
+          .catch(function(err) { console.log('SW failed:', err) })
+      })
+    }
+  </script>
+</body>
+</html>
