@@ -370,6 +370,19 @@ textarea { resize: vertical; min-height: 100px; }
 .log-entry-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
 .log-entry-title { font-weight: 700; font-size: var(--font-size-base); flex: 1; margin-right: var(--space-sm); line-height: 1.4; }
 .log-entry-meta { font-size: var(--font-size-sm); color: var(--color-text-muted); }
+/* ── To Do Item ─────────────────────────────────────────── */
+.todo-item {
+  display: flex; align-items: flex-start; gap: var(--space-sm);
+  padding: 10px 0; border-bottom: 1px solid var(--color-border);
+}
+.todo-item:last-child { border-bottom: none; }
+
+/* ── Note Item ──────────────────────────────────────────── */
+.note-item {
+  padding: var(--space-sm) var(--space-md); background: var(--color-bg-secondary);
+  border-radius: var(--radius-lg); margin-bottom: var(--space-xs);
+  border-left: 3px solid var(--color-primary-light);
+}
   </style>
 </head>
 <body>
@@ -535,6 +548,17 @@ db.version(1).stores({
   weeklyreview: '++id, weekStart',
   settings:     'key',
 })
+// Versi 2: tambah store todo dan notes
+db.version(2).stores({
+  worklog:      '++id, date, workType, project, status, category',
+  activitylog:  '++id, date, activityType, completion',
+  goals:        '++id, type, status, endDate',
+  journal:      '++id, date, mood, *tags',
+  weeklyreview: '++id, weekStart',
+  settings:     'key',
+  todo:         '++id, status, priority, deadline, createdAt',
+  notes:        '++id, createdAt, updatedAt',
+})
 
 // ── DB helpers ──
 async function saveWorklog(e) { return e.id ? (await db.worklog.put(e), e.id) : db.worklog.add(e) }
@@ -558,6 +582,21 @@ async function deleteJournal(id) { return db.journal.delete(id) }
 
 async function saveReview(r) { return r.id ? (await db.weeklyreview.put(r), r.id) : db.weeklyreview.add(r) }
 async function getReviewByWeekStart(w) { return db.weeklyreview.where('weekStart').equals(w).first() }
+
+// ── Todo CRUD ──
+async function saveTodo(t) { return t.id ? (await db.todo.put(t), t.id) : db.todo.add(t) }
+async function getAllTodos() { return db.todo.orderBy('createdAt').toArray() }
+async function deleteTodo(id) { return db.todo.delete(id) }
+
+// ── Notes CRUD ──
+async function saveNote(n) {
+  n.updatedAt = new Date().toISOString()
+  if (n.id) { await db.notes.put(n); return n.id }
+  n.createdAt = n.updatedAt
+  return db.notes.add(n)
+}
+async function getAllNotes() { return db.notes.orderBy('updatedAt').reverse().toArray() }
+async function deleteNote(id) { return db.notes.delete(id) }
 
 // ══════════════════════════════════════════════
 // FORMULA ENGINE
@@ -832,35 +871,159 @@ async function renderHome() {
     const intentionEntry = await db.settings.get('todayIntention')
     const intention = intentionEntry ? intentionEntry.value : ''
     const goals = await getAllGoals()
-    const activeGoals = goals.filter(function(g){ return g.status!=='Achieved'&&g.status!=='Failed' }).slice(0,5)
+    const activeGoals = goals.filter(function(g){ return g.status!=='Achieved'&&g.status!=='Failed' }).slice(0,3)
+    const todos = await getAllTodos()
+    const activeTodos = todos.filter(function(t){ return t.status !== 'done' })
+    const doneTodos = todos.filter(function(t){ return t.status === 'done' })
+    const notes = await getAllNotes()
+
+    const todayStr = today()
+    const PRIORITY_COLOR = { High: 'var(--color-danger-text)', Medium: 'var(--color-warning-text)', Low: 'var(--color-text-muted)' }
+    const PRIORITY_BG = { High: 'var(--color-danger-bg)', Medium: 'var(--color-warning-bg)', Low: 'var(--color-bg-secondary)' }
+
+    // Cek todo overdue
+    const overdueCount = activeTodos.filter(function(t){ return t.deadline && t.deadline < todayStr }).length
 
     app.innerHTML =
+      // ── Header ──
       '<div class="screen-header">'+
       '<div><h2>Halo, '+userName+'! 👋</h2>'+
       '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm)">'+formatDate(new Date())+'</p></div>'+
       '<div class="streak-badge">🔥 '+streak+' hari</div>'+
       '</div>'+
+
+      // ── Niat ──
       '<div class="card" style="margin-bottom:var(--space-md)">'+
       '<p class="card-title">Niatmu hari ini</p>'+
       '<input type="text" id="intentionInput" placeholder="Apa yang ingin kamu capai hari ini?" value="'+(intention||'')+'">'+
       '</div>'+
+
+      // ── KPI ──
       '<div class="kpi-grid">'+
       '<div class="kpi-card"><div class="kpi-value">'+kpi.totalHours.toFixed(1)+'j</div><div class="kpi-label">Jam kerja minggu ini</div></div>'+
       '<div class="kpi-card"><div class="kpi-value">'+kpi.taskDone+'/'+kpi.taskTotal+'</div><div class="kpi-label">Task selesai</div></div>'+
-      '<div class="kpi-card"><div class="kpi-value">'+kpi.activitiesFull+'</div><div class="kpi-label">Aktivitas full</div></div>'+
+      '<div class="kpi-card"><div class="kpi-value">'+activeTodos.length+'</div><div class="kpi-label">To Do aktif</div></div>'+
       '<div class="kpi-card"><div class="kpi-value">'+(kpi.avgMood>0?MOOD_EMOJIS[Math.round(kpi.avgMood)-1]:'—')+'</div><div class="kpi-label">Avg mood</div></div>'+
       '</div>'+
+
+      // ── TO DO SECTION ──
+      '<div class="card" style="margin-bottom:var(--space-md)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">'+
+      '<p class="card-title" style="margin-bottom:0">📌 To Do'+
+      (overdueCount>0 ? ' <span style="background:var(--color-danger-bg);color:var(--color-danger-text);font-size:10px;padding:2px 7px;border-radius:99px;font-weight:700">'+overdueCount+' terlambat</span>' : '')+
+      '</p>'+
+      '<button id="addTodoBtn" style="background:var(--color-primary-pale);color:var(--color-primary);border:none;border-radius:var(--radius-full);padding:4px 12px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Tambah</button>'+
+      '</div>'+
+
+      // Form tambah todo (tersembunyi)
+      '<div id="todoForm" style="display:none;margin-bottom:var(--space-md);background:var(--color-bg-secondary);border-radius:var(--radius-lg);padding:var(--space-md)">'+
+      '<div class="form-group"><input type="text" id="todoText" placeholder="Deskripsi task..." style="background:var(--color-bg)"></div>'+
+      '<div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-sm)">'+
+      '<div style="flex:1"><label class="form-label">Prioritas</label>'+
+      '<div class="chip-group" id="todoPriorityChips">'+
+      ['High','Medium','Low'].map(function(p){ return '<button class="chip'+(p==='Medium'?' selected':'')+'" data-priority="'+p+'">'+p+'</button>' }).join('')+
+      '</div></div>'+
+      '<div style="flex:1"><label class="form-label">Deadline (opsional)</label>'+
+      '<input type="date" id="todoDeadline" style="background:var(--color-bg)"></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:var(--space-sm)">'+
+      '<button class="btn btn-primary" id="saveTodoBtn" style="flex:2">Simpan</button>'+
+      '<button class="btn btn-secondary" id="cancelTodoBtn" style="flex:1">Batal</button>'+
+      '</div></div>'+
+
+      // List todo aktif
+      (activeTodos.length===0 && !document.getElementById('todoForm') ?
+        '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm);text-align:center;padding:var(--space-md) 0">Tidak ada task aktif 🎉</p>'
+      :
+        '<div id="todoList">'+
+        (activeTodos.length===0 ? '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm);text-align:center;padding:var(--space-md) 0">Tidak ada task aktif 🎉</p>' :
+        activeTodos.sort(function(a,b){
+          const po = {High:0,Medium:1,Low:2}
+          return (po[a.priority]||1)-(po[b.priority]||1)
+        }).map(function(t) {
+          const isOverdue = t.deadline && t.deadline < todayStr
+          return '<div class="todo-item" data-id="'+t.id+'">'+
+            '<button class="todo-check" data-id="'+t.id+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--color-border);background:var(--color-bg);flex-shrink:0;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center"></button>'+
+            '<div style="flex:1;min-width:0">'+
+            '<p style="font-weight:600;font-size:var(--font-size-sm);line-height:1.4">'+t.text+'</p>'+
+            '<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'+
+            '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:'+PRIORITY_BG[t.priority]+';color:'+PRIORITY_COLOR[t.priority]+'">'+t.priority+'</span>'+
+            (t.deadline ? '<span style="font-size:11px;color:'+(isOverdue?'var(--color-danger-text)':'var(--color-text-muted)')+'">📅 '+t.deadline+(isOverdue?' · Terlambat':'')+'</span>' : '')+
+            '</div></div>'+
+            '<button class="todo-delete" data-id="'+t.id+'" style="color:var(--color-text-muted);font-size:16px;padding:4px;touch-action:manipulation;flex-shrink:0">✕</button>'+
+            '</div>'
+        }).join(''))+ '</div>'
+      )+
+
+      // Selesai (collapsed)
+      (doneTodos.length>0 ?
+        '<div style="margin-top:var(--space-sm)">'+
+        '<button id="toggleDone" style="color:var(--color-text-muted);font-size:var(--font-size-sm);touch-action:manipulation;padding:4px 0">▶ '+doneTodos.length+' task selesai</button>'+
+        '<div id="doneTodoList" style="display:none;margin-top:var(--space-sm)">'+
+        doneTodos.map(function(t){
+          return '<div class="todo-item" style="opacity:0.6" data-id="'+t.id+'">'+
+            '<button class="todo-uncheck" data-id="'+t.id+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--color-primary);background:var(--color-primary);flex-shrink:0;cursor:pointer;touch-action:manipulation;color:white;font-size:12px;display:flex;align-items:center;justify-content:center">✓</button>'+
+            '<p style="flex:1;text-decoration:line-through;font-size:var(--font-size-sm);color:var(--color-text-muted)">'+t.text+'</p>'+
+            '<button class="todo-delete" data-id="'+t.id+'" style="color:var(--color-text-muted);font-size:16px;padding:4px;touch-action:manipulation">✕</button>'+
+            '</div>'
+        }).join('')+
+        '</div></div>'
+      : '')+
+      '</div>'+
+
+      // ── CATATAN KASAR ──
+      '<div class="card" style="margin-bottom:var(--space-md)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">'+
+      '<p class="card-title" style="margin-bottom:0">📝 Catatan Kasar</p>'+
+      '<button id="addNoteBtn" style="background:var(--color-primary-pale);color:var(--color-primary);border:none;border-radius:var(--radius-full);padding:4px 12px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Baru</button>'+
+      '</div>'+
+
+      // Form catatan baru
+      '<div id="noteForm" style="display:none;margin-bottom:var(--space-md)">'+
+      '<textarea id="noteText" rows="3" placeholder="Tulis apapun di sini — ide, draft, kutipan, daftar..." style="margin-bottom:var(--space-sm)"></textarea>'+
+      '<div style="display:flex;gap:var(--space-sm)">'+
+      '<button class="btn btn-primary" id="saveNoteBtn" style="flex:2">Simpan</button>'+
+      '<button class="btn btn-secondary" id="cancelNoteBtn" style="flex:1">Batal</button>'+
+      '</div></div>'+
+
+      // List catatan
+      (notes.length===0 ?
+        '<p style="color:var(--color-text-muted);font-size:var(--font-size-sm);text-align:center;padding:var(--space-md) 0">Belum ada catatan</p>'
+      :
+        notes.slice(0,5).map(function(n) {
+          const preview = n.content.length > 100 ? n.content.slice(0,100)+'...' : n.content
+          const timeAgo = getTimeAgo(n.updatedAt)
+          return '<div class="note-item" data-id="'+n.id+'">'+
+            '<p style="font-size:var(--font-size-sm);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+preview+'</p>'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'+
+            '<span style="font-size:11px;color:var(--color-text-muted)">'+timeAgo+'</span>'+
+            '<div style="display:flex;gap:var(--space-sm)">'+
+            '<button class="note-edit" data-id="'+n.id+'" style="font-size:12px;color:var(--color-primary);touch-action:manipulation">✏️ Edit</button>'+
+            '<button class="note-delete" data-id="'+n.id+'" style="font-size:12px;color:var(--color-text-muted);touch-action:manipulation">🗑️</button>'+
+            '</div></div>'+
+            '</div>'
+        }).join('')+
+        (notes.length>5 ? '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);text-align:center;margin-top:var(--space-sm)">+'+( notes.length-5)+' catatan lainnya</p>' : '')
+      )+
+      '</div>'+
+
+      // ── Goals snippet ──
       (activeGoals.length>0 ? '<div class="card" id="goalsCard"><p class="card-title">Goals aktif</p><div id="goalsList"></div></div>' : '')+
+
       '<div style="height:var(--space-xl)"></div>'
 
+    // ── Event listeners ──
+
+    // Intention
     const ii = document.getElementById('intentionInput')
     if (ii) ii.addEventListener('change', async function(){ await db.settings.put({key:'todayIntention',value:this.value}) })
 
+    // Goals progress
     if (activeGoals.length>0) {
       const list = document.getElementById('goalsList')
       for (let i=0;i<activeGoals.length;i++) {
         const g=activeGoals[i]; const pct=await Formula.goalPct(g); const pi=Math.round(pct*100)
-        const div=document.createElement('div'); div.style.marginBottom='var(--space-md)'
+        const div=document.createElement('div'); div.style.marginBottom='12px'
         div.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
           '<span style="font-size:var(--font-size-sm);font-weight:600">'+g.goalName+'</span>'+
           '<span style="font-size:var(--font-size-sm);color:var(--color-text-muted)">'+pi+'%</span></div>'+
@@ -868,10 +1031,131 @@ async function renderHome() {
         list.appendChild(div)
       }
     }
+
+    // ── TODO events ──
+    document.getElementById('addTodoBtn').addEventListener('click', function(){
+      const f=document.getElementById('todoForm')
+      f.style.display = f.style.display==='none' ? 'block' : 'none'
+      if (f.style.display==='block') document.getElementById('todoText').focus()
+    })
+    document.getElementById('cancelTodoBtn').addEventListener('click', function(){
+      document.getElementById('todoForm').style.display='none'
+      document.getElementById('todoText').value=''
+    })
+
+    // Priority chips dalam form todo
+    let todoPriority = 'Medium'
+    document.getElementById('todoPriorityChips').addEventListener('click', function(e){
+      const c=e.target.closest('.chip'); if(!c) return
+      this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('selected')})
+      c.classList.add('selected'); todoPriority=c.dataset.priority
+    })
+
+    document.getElementById('saveTodoBtn').addEventListener('click', async function(){
+      const text = document.getElementById('todoText').value.trim()
+      if (!text) { document.getElementById('todoText').focus(); return }
+      const deadline = document.getElementById('todoDeadline').value || null
+      await saveTodo({ text, priority: todoPriority, deadline, status: 'active', createdAt: new Date().toISOString() })
+      document.getElementById('todoForm').style.display='none'
+      document.getElementById('todoText').value=''
+      await renderHome()
+    })
+
+    // Check / complete todo
+    app.querySelectorAll('.todo-check').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const id=parseInt(this.dataset.id)
+        const t=await db.todo.get(id)
+        if(t){ t.status='done'; t.doneAt=today(); await saveTodo(t); await renderHome() }
+      })
+    })
+
+    // Uncheck todo
+    app.querySelectorAll('.todo-uncheck').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const id=parseInt(this.dataset.id)
+        const t=await db.todo.get(id)
+        if(t){ t.status='active'; delete t.doneAt; await saveTodo(t); await renderHome() }
+      })
+    })
+
+    // Delete todo
+    app.querySelectorAll('.todo-delete').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        if(!confirm('Hapus task ini?')) return
+        await deleteTodo(parseInt(this.dataset.id)); await renderHome()
+      })
+    })
+
+    // Toggle done list
+    const toggleDone = document.getElementById('toggleDone')
+    if (toggleDone) {
+      toggleDone.addEventListener('click', function(){
+        const dl=document.getElementById('doneTodoList')
+        const isOpen = dl.style.display!=='none'
+        dl.style.display = isOpen?'none':'block'
+        this.textContent = (isOpen?'▶':'▼')+' '+doneTodos.length+' task selesai'
+      })
+    }
+
+    // ── NOTES events ──
+    document.getElementById('addNoteBtn').addEventListener('click', function(){
+      const f=document.getElementById('noteForm')
+      f.style.display = f.style.display==='none' ? 'block' : 'none'
+      if (f.style.display==='block') document.getElementById('noteText').focus()
+    })
+    document.getElementById('cancelNoteBtn').addEventListener('click', function(){
+      document.getElementById('noteForm').style.display='none'
+      document.getElementById('noteText').value=''
+    })
+    document.getElementById('saveNoteBtn').addEventListener('click', async function(){
+      const content=document.getElementById('noteText').value.trim()
+      if (!content) { document.getElementById('noteText').focus(); return }
+      await saveNote({ content })
+      document.getElementById('noteForm').style.display='none'
+      document.getElementById('noteText').value=''
+      await renderHome()
+    })
+
+    // Edit note
+    app.querySelectorAll('.note-edit').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const id=parseInt(this.dataset.id)
+        const n=await db.notes.get(id)
+        if (!n) return
+        const newContent = prompt('Edit catatan:', n.content)
+        if (newContent===null) return
+        n.content=newContent.trim()
+        if(n.content){ await saveNote(n); await renderHome() }
+      })
+    })
+
+    // Delete note
+    app.querySelectorAll('.note-delete').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        if(!confirm('Hapus catatan ini?')) return
+        await deleteNote(parseInt(this.dataset.id)); await renderHome()
+      })
+    })
+
   } catch(err) {
     app.innerHTML = '<div class="empty-state"><p>Error memuat home: '+err.message+'</p></div>'
     console.error(err)
   }
+}
+
+// Helper: waktu relatif
+function getTimeAgo(isoStr) {
+  if (!isoStr) return ''
+  const diff = Date.now() - new Date(isoStr).getTime()
+  const m = Math.floor(diff/60000)
+  if (m < 1) return 'Baru saja'
+  if (m < 60) return m+' menit lalu'
+  const h = Math.floor(m/60)
+  if (h < 24) return h+' jam lalu'
+  const d = Math.floor(h/24)
+  if (d < 7) return d+' hari lalu'
+  return formatDateShort(new Date(isoStr))
 }
 
 // ══════════════════════════════════════════════
