@@ -383,6 +383,63 @@ textarea { resize: vertical; min-height: 100px; }
   border-radius: var(--radius-lg); margin-bottom: var(--space-xs);
   border-left: 3px solid var(--color-primary-light);
 }
+
+/* ── Note Full Text (layar Catatan Kasar) ─────────────────── */
+.note-full-text {
+  font-size: var(--font-size-base);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+.note-full textarea {
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+/* ── Mic Button (Speech to Text) ──────────────────────────── */
+.mic-field-wrap {
+  position: relative;
+}
+.mic-field-wrap input,
+.mic-field-wrap textarea {
+  padding-right: 44px;
+}
+.mic-btn {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
+  z-index: 5;
+  transition: all 0.2s;
+}
+.mic-btn.mic-recording {
+  background: var(--color-danger-text);
+  border-color: var(--color-danger-text);
+  color: white;
+  animation: micPulse 1.2s ease-in-out infinite;
+}
+@keyframes micPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(156,0,6,0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(156,0,6,0); }
+}
+/* Untuk textarea, mic ditaruh di pojok kanan atas */
+.mic-field-wrap textarea ~ .mic-btn { top: 8px; }
+/* Kalau ada label di atas input, mic perlu turun sejajar dengan input */
+.form-group.mic-field-wrap { position: relative; }
+.form-group.mic-field-wrap .mic-btn { top: auto; bottom: 8px; }
   </style>
 </head>
 <body>
@@ -393,14 +450,14 @@ textarea { resize: vertical; min-height: 100px; }
       <span class="nav-icon">🏠</span>
       <span>Home</span>
     </div>
-    <div class="nav-item" data-route="log">
-      <span class="nav-icon">📋</span>
-      <span>Log</span>
+    <div class="nav-item" data-route="todo">
+      <span class="nav-icon">📌</span>
+      <span>To Do</span>
     </div>
     <button class="fab" id="fabBtn" aria-label="Tambah baru">+</button>
-    <div class="nav-item" data-route="journal">
-      <span class="nav-icon">📓</span>
-      <span>Jurnal</span>
+    <div class="nav-item" data-route="notes">
+      <span class="nav-icon">📝</span>
+      <span>Catatan</span>
     </div>
     <div class="nav-item" data-route="goals">
       <span class="nav-icon">🎯</span>
@@ -428,6 +485,13 @@ textarea { resize: vertical; min-height: 100px; }
       <div>
         <p class="fab-option-name">Tulis Jurnal</p>
         <p class="fab-option-sub">Refleksi dan catatan bebas</p>
+      </div>
+    </div>
+    <div class="fab-option" data-action="lihat-log">
+      <span class="fab-option-icon">📋</span>
+      <div>
+        <p class="fab-option-name">Riwayat Log</p>
+        <p class="fab-option-sub">Lihat log kerja & aktivitas hari ini</p>
       </div>
     </div>
     <div class="fab-option" data-action="review">
@@ -912,12 +976,14 @@ async function renderHome() {
       '<p class="card-title" style="margin-bottom:0">📌 To Do'+
       (overdueCount>0 ? ' <span style="background:var(--color-danger-bg);color:var(--color-danger-text);font-size:10px;padding:2px 7px;border-radius:99px;font-weight:700">'+overdueCount+' terlambat</span>' : '')+
       '</p>'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
+      '<button id="goToTodoScreen" style="background:none;color:var(--color-primary);border:none;font-size:var(--font-size-sm);font-weight:600;cursor:pointer;touch-action:manipulation">Lihat semua →</button>'+
       '<button id="addTodoBtn" style="background:var(--color-primary-pale);color:var(--color-primary);border:none;border-radius:var(--radius-full);padding:4px 12px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Tambah</button>'+
-      '</div>'+
+      '</div></div>'+
 
       // Form tambah todo (tersembunyi)
       '<div id="todoForm" style="display:none;margin-bottom:var(--space-md);background:var(--color-bg-secondary);border-radius:var(--radius-lg);padding:var(--space-md)">'+
-      '<div class="form-group"><input type="text" id="todoText" placeholder="Deskripsi task..." style="background:var(--color-bg)"></div>'+
+      '<div class="form-group mic-field-wrap"><input type="text" id="todoText" placeholder="Deskripsi task..." style="background:var(--color-bg)">'+micButtonHTML('todoText')+'</div>'+
       '<div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-sm)">'+
       '<div style="flex:1"><label class="form-label">Prioritas</label>'+
       '<div class="chip-group" id="todoPriorityChips">'+
@@ -945,7 +1011,7 @@ async function renderHome() {
           return '<div class="todo-item" data-id="'+t.id+'">'+
             '<button class="todo-check" data-id="'+t.id+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--color-border);background:var(--color-bg);flex-shrink:0;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center"></button>'+
             '<div style="flex:1;min-width:0">'+
-            '<p style="font-weight:600;font-size:var(--font-size-sm);line-height:1.4">'+t.text+'</p>'+
+            '<p style="font-weight:600;font-size:var(--font-size-sm);line-height:1.4">'+escapeHTML(t.text)+'</p>'+
             '<div style="display:flex;align-items:center;gap:6px;margin-top:3px">'+
             '<span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:'+PRIORITY_BG[t.priority]+';color:'+PRIORITY_COLOR[t.priority]+'">'+t.priority+'</span>'+
             (t.deadline ? '<span style="font-size:11px;color:'+(isOverdue?'var(--color-danger-text)':'var(--color-text-muted)')+'">📅 '+t.deadline+(isOverdue?' · Terlambat':'')+'</span>' : '')+
@@ -963,7 +1029,7 @@ async function renderHome() {
         doneTodos.map(function(t){
           return '<div class="todo-item" style="opacity:0.6" data-id="'+t.id+'">'+
             '<button class="todo-uncheck" data-id="'+t.id+'" style="width:22px;height:22px;border-radius:50%;border:2px solid var(--color-primary);background:var(--color-primary);flex-shrink:0;cursor:pointer;touch-action:manipulation;color:white;font-size:12px;display:flex;align-items:center;justify-content:center">✓</button>'+
-            '<p style="flex:1;text-decoration:line-through;font-size:var(--font-size-sm);color:var(--color-text-muted)">'+t.text+'</p>'+
+            '<p style="flex:1;text-decoration:line-through;font-size:var(--font-size-sm);color:var(--color-text-muted)">'+escapeHTML(t.text)+'</p>'+
             '<button class="todo-delete" data-id="'+t.id+'" style="color:var(--color-text-muted);font-size:16px;padding:4px;touch-action:manipulation">✕</button>'+
             '</div>'
         }).join('')+
@@ -975,12 +1041,17 @@ async function renderHome() {
       '<div class="card" style="margin-bottom:var(--space-md)">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">'+
       '<p class="card-title" style="margin-bottom:0">📝 Catatan Kasar</p>'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
+      '<button id="goToNotesScreen" style="background:none;color:var(--color-primary);border:none;font-size:var(--font-size-sm);font-weight:600;cursor:pointer;touch-action:manipulation">Lihat semua →</button>'+
       '<button id="addNoteBtn" style="background:var(--color-primary-pale);color:var(--color-primary);border:none;border-radius:var(--radius-full);padding:4px 12px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Baru</button>'+
-      '</div>'+
+      '</div></div>'+
 
       // Form catatan baru
       '<div id="noteForm" style="display:none;margin-bottom:var(--space-md)">'+
-      '<textarea id="noteText" rows="3" placeholder="Tulis apapun di sini — ide, draft, kutipan, daftar..." style="margin-bottom:var(--space-sm)"></textarea>'+
+      '<div class="mic-field-wrap" style="margin-bottom:var(--space-sm)">'+
+      '<textarea id="noteText" rows="3" placeholder="Tulis apapun di sini — ide, draft, kutipan, daftar..."></textarea>'+
+      micButtonHTML('noteText')+
+      '</div>'+
       '<div style="display:flex;gap:var(--space-sm)">'+
       '<button class="btn btn-primary" id="saveNoteBtn" style="flex:2">Simpan</button>'+
       '<button class="btn btn-secondary" id="cancelNoteBtn" style="flex:1">Batal</button>'+
@@ -994,7 +1065,7 @@ async function renderHome() {
           const preview = n.content.length > 100 ? n.content.slice(0,100)+'...' : n.content
           const timeAgo = getTimeAgo(n.updatedAt)
           return '<div class="note-item" data-id="'+n.id+'">'+
-            '<p style="font-size:var(--font-size-sm);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+preview+'</p>'+
+            '<p style="font-size:var(--font-size-sm);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+escapeHTML(preview)+'</p>'+
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'+
             '<span style="font-size:11px;color:var(--color-text-muted)">'+timeAgo+'</span>'+
             '<div style="display:flex;gap:var(--space-sm)">'+
@@ -1011,6 +1082,8 @@ async function renderHome() {
       (activeGoals.length>0 ? '<div class="card" id="goalsCard"><p class="card-title">Goals aktif</p><div id="goalsList"></div></div>' : '')+
 
       '<div style="height:var(--space-xl)"></div>'
+
+    attachMicButtons(app)
 
     // ── Event listeners ──
 
@@ -1033,6 +1106,7 @@ async function renderHome() {
     }
 
     // ── TODO events ──
+    document.getElementById('goToTodoScreen').addEventListener('click', function(){ navigate('todo') })
     document.getElementById('addTodoBtn').addEventListener('click', function(){
       const f=document.getElementById('todoForm')
       f.style.display = f.style.display==='none' ? 'block' : 'none'
@@ -1099,6 +1173,7 @@ async function renderHome() {
     }
 
     // ── NOTES events ──
+    document.getElementById('goToNotesScreen').addEventListener('click', function(){ navigate('notes') })
     document.getElementById('addNoteBtn').addEventListener('click', function(){
       const f=document.getElementById('noteForm')
       f.style.display = f.style.display==='none' ? 'block' : 'none'
@@ -1156,6 +1231,336 @@ function getTimeAgo(isoStr) {
   const d = Math.floor(h/24)
   if (d < 7) return d+' hari lalu'
   return formatDateShort(new Date(isoStr))
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: TO DO (full page, dedicated nav)
+// ══════════════════════════════════════════════
+let todoScreenFilter = 'aktif' // 'aktif' | 'selesai' | 'semua'
+
+async function renderTodoScreen() {
+  const app = document.getElementById('app')
+  const todos = await getAllTodos()
+  const todayStr = today()
+  const PRIORITY_COLOR = { High: 'var(--color-danger-text)', Medium: 'var(--color-warning-text)', Low: 'var(--color-text-muted)' }
+  const PRIORITY_BG = { High: 'var(--color-danger-bg)', Medium: 'var(--color-warning-bg)', Low: 'var(--color-bg-secondary)' }
+
+  const activeTodos = todos.filter(function(t){ return t.status !== 'done' })
+  const doneTodos = todos.filter(function(t){ return t.status === 'done' })
+  const overdueCount = activeTodos.filter(function(t){ return t.deadline && t.deadline < todayStr }).length
+
+  let shown = todoScreenFilter==='aktif' ? activeTodos : todoScreenFilter==='selesai' ? doneTodos : todos
+  shown = shown.slice().sort(function(a,b){
+    if (a.status!==b.status) return a.status==='done' ? 1 : -1
+    const po = {High:0,Medium:1,Low:2}
+    return (po[a.priority]||1)-(po[b.priority]||1)
+  })
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<h2 class="screen-title">To Do 📌</h2>'+
+    '<button id="addTodoBtnTop" style="background:var(--color-primary);color:white;border:none;border-radius:var(--radius-full);padding:8px 18px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Tambah</button>'+
+    '</div>'+
+
+    // Form tambah (sama seperti di Home)
+    '<div id="todoForm" style="display:none;margin-bottom:var(--space-md);background:var(--color-bg-secondary);border-radius:var(--radius-lg);padding:var(--space-md)">'+
+    '<div class="form-group mic-field-wrap"><input type="text" id="todoText" placeholder="Deskripsi task..." style="background:var(--color-bg)">'+micButtonHTML('todoText')+'</div>'+
+    '<div style="display:flex;gap:var(--space-sm);margin-bottom:var(--space-sm)">'+
+    '<div style="flex:1"><label class="form-label">Prioritas</label>'+
+    '<div class="chip-group" id="todoPriorityChips">'+
+    ['High','Medium','Low'].map(function(p){ return '<button class="chip'+(p==='Medium'?' selected':'')+'" data-priority="'+p+'">'+p+'</button>' }).join('')+
+    '</div></div>'+
+    '<div style="flex:1"><label class="form-label">Deadline (opsional)</label>'+
+    '<input type="date" id="todoDeadline" style="background:var(--color-bg)"></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:var(--space-sm)">'+
+    '<button class="btn btn-primary" id="saveTodoBtn" style="flex:2">Simpan</button>'+
+    '<button class="btn btn-secondary" id="cancelTodoBtn" style="flex:1">Batal</button>'+
+    '</div></div>'+
+
+    // Tabs filter
+    '<div class="tabs">'+
+    '<div class="tab'+(todoScreenFilter==='aktif'?' active':'')+'" data-tfilter="aktif">Aktif ('+activeTodos.length+')'+(overdueCount>0?' ⚠️':'')+'</div>'+
+    '<div class="tab'+(todoScreenFilter==='selesai'?' active':'')+'" data-tfilter="selesai">Selesai ('+doneTodos.length+')</div>'+
+    '<div class="tab'+(todoScreenFilter==='semua'?' active':'')+'" data-tfilter="semua">Semua</div>'+
+    '</div>'+
+
+    // List — full text, scrollable container
+    (shown.length===0 ?
+      '<div class="empty-state"><div class="empty-state-icon">📌</div>'+
+      '<p class="empty-state-title">'+(todoScreenFilter==='aktif'?'Tidak ada task aktif 🎉':'Belum ada task di sini')+'</p>'+
+      '<p style="color:var(--color-text-muted)">Tekan "+ Tambah" untuk membuat task baru.</p></div>'
+    :
+      '<div style="max-height:none">'+
+      shown.map(function(t) {
+        const isDone = t.status==='done'
+        const isOverdue = !isDone && t.deadline && t.deadline < todayStr
+        return '<div class="card" style="margin-bottom:var(--space-sm)'+(isDone?';opacity:0.65':'')+'" data-id="'+t.id+'">'+
+          '<div style="display:flex;align-items:flex-start;gap:var(--space-sm)">'+
+          '<button class="'+(isDone?'todo-uncheck':'todo-check')+'" data-id="'+t.id+'" style="width:24px;height:24px;border-radius:50%;border:2px solid '+(isDone?'var(--color-primary)':'var(--color-border)')+';background:'+(isDone?'var(--color-primary)':'var(--color-bg)')+';flex-shrink:0;cursor:pointer;touch-action:manipulation;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;margin-top:2px">'+(isDone?'✓':'')+'</button>'+
+          '<div style="flex:1;min-width:0">'+
+          '<p style="font-weight:600;font-size:var(--font-size-base);line-height:1.5;white-space:pre-wrap;word-break:break-word'+(isDone?';text-decoration:line-through;color:var(--color-text-muted)':'')+'">'+escapeHTML(t.text)+'</p>'+
+          '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">'+
+          '<span style="font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;background:'+PRIORITY_BG[t.priority]+';color:'+PRIORITY_COLOR[t.priority]+'">'+t.priority+'</span>'+
+          (t.deadline ? '<span style="font-size:12px;color:'+(isOverdue?'var(--color-danger-text)':'var(--color-text-muted)')+'">📅 '+t.deadline+(isOverdue?' · Terlambat':'')+'</span>' : '')+
+          '</div></div>'+
+          '<button class="todo-delete" data-id="'+t.id+'" style="color:var(--color-text-muted);font-size:18px;padding:4px;touch-action:manipulation;flex-shrink:0">✕</button>'+
+          '</div></div>'
+      }).join('')+
+      '</div>'
+    )+
+    '<div style="height:var(--space-xl)"></div>'
+
+  attachMicButtons(app)
+
+  function bindAddForm() {
+    document.getElementById('addTodoBtnTop').addEventListener('click', function(){
+      const f=document.getElementById('todoForm')
+      f.style.display = f.style.display==='none' ? 'block' : 'none'
+      if (f.style.display==='block') document.getElementById('todoText').focus()
+    })
+    document.getElementById('cancelTodoBtn').addEventListener('click', function(){
+      document.getElementById('todoForm').style.display='none'
+      document.getElementById('todoText').value=''
+    })
+    let todoPriority = 'Medium'
+    document.getElementById('todoPriorityChips').addEventListener('click', function(e){
+      const c=e.target.closest('.chip'); if(!c) return
+      this.querySelectorAll('.chip').forEach(function(x){x.classList.remove('selected')})
+      c.classList.add('selected'); todoPriority=c.dataset.priority
+    })
+    document.getElementById('saveTodoBtn').addEventListener('click', async function(){
+      const text = document.getElementById('todoText').value.trim()
+      if (!text) { document.getElementById('todoText').focus(); return }
+      const deadline = document.getElementById('todoDeadline').value || null
+      await saveTodo({ text, priority: todoPriority, deadline, status: 'active', createdAt: new Date().toISOString() })
+      await renderTodoScreen()
+    })
+  }
+  bindAddForm()
+
+  // Filter tabs
+  app.querySelectorAll('[data-tfilter]').forEach(function(tab) {
+    tab.addEventListener('click', function(){ todoScreenFilter=this.dataset.tfilter; renderTodoScreen() })
+  })
+
+  // Check/uncheck/delete
+  app.querySelectorAll('.todo-check').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      const id=parseInt(this.dataset.id)
+      const t=await db.todo.get(id)
+      if(t){ t.status='done'; t.doneAt=today(); await saveTodo(t); await renderTodoScreen() }
+    })
+  })
+  app.querySelectorAll('.todo-uncheck').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      const id=parseInt(this.dataset.id)
+      const t=await db.todo.get(id)
+      if(t){ t.status='active'; delete t.doneAt; await saveTodo(t); await renderTodoScreen() }
+    })
+  })
+  app.querySelectorAll('.todo-delete').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      if(!confirm('Hapus task ini?')) return
+      await deleteTodo(parseInt(this.dataset.id)); await renderTodoScreen()
+    })
+  })
+}
+
+// ══════════════════════════════════════════════
+// SCREEN: CATATAN KASAR (full page, dedicated nav)
+// ══════════════════════════════════════════════
+async function renderNotesScreen() {
+  const app = document.getElementById('app')
+  const notes = await getAllNotes()
+
+  app.innerHTML =
+    '<div class="screen-header">'+
+    '<h2 class="screen-title">Catatan Kasar 📝</h2>'+
+    '<button id="addNoteBtnTop" style="background:var(--color-primary);color:white;border:none;border-radius:var(--radius-full);padding:8px 18px;font-size:var(--font-size-sm);font-weight:700;cursor:pointer;touch-action:manipulation">+ Baru</button>'+
+    '</div>'+
+
+    '<div id="noteForm" style="display:none;margin-bottom:var(--space-md)">'+
+    '<div class="mic-field-wrap" style="margin-bottom:var(--space-sm)">'+
+    '<textarea id="noteText" rows="5" placeholder="Tulis apapun di sini — ide, draft, kutipan, daftar belanja..."></textarea>'+
+    micButtonHTML('noteText')+
+    '</div>'+
+    '<div style="display:flex;gap:var(--space-sm)">'+
+    '<button class="btn btn-primary" id="saveNoteBtn" style="flex:2">Simpan</button>'+
+    '<button class="btn btn-secondary" id="cancelNoteBtn" style="flex:1">Batal</button>'+
+    '</div></div>'+
+
+    (notes.length===0 ?
+      '<div class="empty-state"><div class="empty-state-icon">📝</div>'+
+      '<p class="empty-state-title">Belum ada catatan</p>'+
+      '<p style="color:var(--color-text-muted)">Tekan "+ Baru" untuk menulis catatan pertamamu.</p></div>'
+    :
+      notes.map(function(n) {
+        const timeAgo = getTimeAgo(n.updatedAt)
+        return '<div class="card note-full" data-id="'+n.id+'" style="margin-bottom:var(--space-sm)">'+
+          '<div class="note-content-wrap">'+
+          '<p class="note-full-text">'+escapeHTML(n.content)+'</p>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:var(--space-sm);padding-top:var(--space-sm);border-top:1px solid var(--color-border)">'+
+          '<span style="font-size:11px;color:var(--color-text-muted)">🕐 '+timeAgo+'</span>'+
+          '<div style="display:flex;gap:var(--space-md)">'+
+          '<button class="note-edit" data-id="'+n.id+'" style="font-size:var(--font-size-sm);color:var(--color-primary);font-weight:600;touch-action:manipulation">✏️ Edit</button>'+
+          '<button class="note-delete" data-id="'+n.id+'" style="font-size:var(--font-size-sm);color:var(--color-text-muted);touch-action:manipulation">🗑️ Hapus</button>'+
+          '</div></div>'+
+          '</div>'
+      }).join('')
+    )+
+    '<div style="height:var(--space-xl)"></div>'
+
+  attachMicButtons(app)
+
+  document.getElementById('addNoteBtnTop').addEventListener('click', function(){
+    const f=document.getElementById('noteForm')
+    f.style.display = f.style.display==='none' ? 'block' : 'none'
+    if (f.style.display==='block') document.getElementById('noteText').focus()
+  })
+  document.getElementById('cancelNoteBtn').addEventListener('click', function(){
+    document.getElementById('noteForm').style.display='none'
+    document.getElementById('noteText').value=''
+  })
+  document.getElementById('saveNoteBtn').addEventListener('click', async function(){
+    const content=document.getElementById('noteText').value.trim()
+    if (!content) { document.getElementById('noteText').focus(); return }
+    await saveNote({ content })
+    await renderNotesScreen()
+  })
+
+  // Edit — pakai textarea inline, bukan prompt()
+  app.querySelectorAll('.note-edit').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      const id=parseInt(this.dataset.id)
+      const card = this.closest('.note-full')
+      const n = await db.notes.get(id)
+      if (!n) return
+      const wrap = card.querySelector('.note-content-wrap')
+      wrap.innerHTML = '<textarea id="editArea'+id+'" rows="5" style="margin-bottom:var(--space-sm)">'+n.content+'</textarea>'+
+        '<div style="display:flex;gap:var(--space-sm)">'+
+        '<button class="btn btn-primary editSaveBtn" data-id="'+id+'" style="flex:1;padding:8px">Simpan</button>'+
+        '<button class="btn btn-secondary editCancelBtn" style="flex:1;padding:8px">Batal</button>'+
+        '</div>'
+      wrap.querySelector('.editSaveBtn').addEventListener('click', async function(){
+        const newContent = document.getElementById('editArea'+id).value.trim()
+        if (!newContent) return
+        n.content = newContent
+        await saveNote(n)
+        await renderNotesScreen()
+      })
+      wrap.querySelector('.editCancelBtn').addEventListener('click', function(){ renderNotesScreen() })
+    })
+  })
+
+  // Delete
+  app.querySelectorAll('.note-delete').forEach(function(btn){
+    btn.addEventListener('click', async function(){
+      if(!confirm('Hapus catatan ini?')) return
+      await deleteNote(parseInt(this.dataset.id)); await renderNotesScreen()
+    })
+  })
+}
+
+// Helper: escape HTML supaya teks pengguna tidak merusak markup
+function escapeHTML(str) {
+  if (!str) return ''
+  return str
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+}
+
+// ══════════════════════════════════════════════
+// SPEECH TO TEXT (Web Speech API)
+// ══════════════════════════════════════════════
+const SpeechAPI = window.SpeechRecognition || window.webkitSpeechRecognition
+const SPEECH_SUPPORTED = !!SpeechAPI
+
+function getSpeechLang() {
+  return localStorage.getItem('speechLang') || 'id-ID'
+}
+function setSpeechLang(lang) {
+  localStorage.setItem('speechLang', lang)
+}
+
+// HTML tombol mic — ditaruh di sebelah field via CSS position
+function micButtonHTML(targetId) {
+  if (!SPEECH_SUPPORTED) return ''
+  return '<button type="button" class="mic-btn" data-target="'+targetId+'" title="Bicara untuk mengisi" aria-label="Speech to text">🎙️</button>'
+}
+
+// Pasang listener mic ke semua tombol .mic-btn yang ada di container tertentu
+function attachMicButtons(container) {
+  if (!SPEECH_SUPPORTED) return
+  container.querySelectorAll('.mic-btn').forEach(function(btn) {
+    if (btn.dataset.bound) return
+    btn.dataset.bound = '1'
+    btn.addEventListener('click', function(e) {
+      e.preventDefault()
+      const targetId = this.dataset.target
+      const field = document.getElementById(targetId)
+      if (!field) return
+      startDictation(this, field)
+    })
+  })
+}
+
+let activeRecognition = null
+
+function startDictation(btn, field) {
+  // Kalau sedang merekam, stop dulu
+  if (activeRecognition) {
+    activeRecognition.stop()
+    return
+  }
+
+  const recognition = new SpeechAPI()
+  recognition.lang = getSpeechLang()
+  recognition.interimResults = true
+  recognition.continuous = false
+
+  const originalValue = field.value
+  const startedWithText = originalValue.length > 0 ? originalValue + ' ' : ''
+
+  btn.classList.add('mic-recording')
+  btn.textContent = '⏹️'
+  activeRecognition = recognition
+
+  recognition.onresult = function(event) {
+    let finalTranscript = ''
+    let interimTranscript = ''
+    for (let i = 0; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript
+      else interimTranscript += event.results[i][0].transcript
+    }
+    field.value = startedWithText + finalTranscript + interimTranscript
+  }
+
+  recognition.onerror = function(event) {
+    console.log('Speech recognition error:', event.error)
+    if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+      alert('Izin mikrofon ditolak. Aktifkan akses mikrofon di setelan browser untuk pakai fitur ini.')
+    } else if (event.error === 'no-speech') {
+      // Diam saja, user mungkin belum mulai bicara
+    }
+  }
+
+  recognition.onend = function() {
+    btn.classList.remove('mic-recording')
+    btn.textContent = '🎙️'
+    activeRecognition = null
+  }
+
+  try {
+    recognition.start()
+  } catch (err) {
+    console.log('Speech start error:', err)
+    btn.classList.remove('mic-recording')
+    btn.textContent = '🎙️'
+    activeRecognition = null
+  }
 }
 
 // ══════════════════════════════════════════════
@@ -1269,9 +1674,10 @@ async function renderFormKerja(prefill) {
       '</div></div>'+
 
       // Deskripsi task
-      '<div class="form-group">'+
+      '<div class="form-group mic-field-wrap">'+
       '<label class="form-label">Deskripsi task <span style="color:var(--color-danger-text)">*</span></label>'+
       '<input type="text" id="taskDesc" placeholder="Contoh: Buat halaman login" value="'+(prefill.taskDesc||')')+'">'+
+      micButtonHTML('taskDesc')+
       '</div>'+
 
       // Jam
@@ -1322,13 +1728,17 @@ async function renderFormKerja(prefill) {
           return '<button class="mood-btn" data-energy="'+n+'">'+n+'</button>'
         }).join('')+
         '</div></div>'+
-        '<div class="form-group"><label class="form-label">Catatan</label>'+
-        '<textarea id="notes" rows="3" placeholder="Catatan bebas...">'+(prefill.notes||'')+'</textarea></div>'+
+        '<div class="form-group mic-field-wrap"><label class="form-label">Catatan</label>'+
+        '<textarea id="notes" rows="3" placeholder="Catatan bebas...">'+(prefill.notes||'')+'</textarea>'+
+        micButtonHTML('notes')+
+        '</div>'+
         '</div>'
       : '') +
 
       '<button class="btn btn-primary" id="saveWorklog" style="margin-top:var(--space-sm)">Simpan Log Kerja</button>'+
       '<div style="height:var(--space-xl)"></div>'
+
+    attachMicButtons(app)
 
     // State chips
     let selectedWorkType = prefill.workType || 'Kantor'
@@ -1438,9 +1848,10 @@ async function renderFormAktivitas(prefill) {
     '</div></div>'+
 
     // Nama spesifik
-    '<div class="form-group">'+
+    '<div class="form-group mic-field-wrap">'+
     '<label class="form-label">Nama spesifik <span style="color:var(--color-danger-text)">*</span></label>'+
     '<input type="text" id="activityName" placeholder="Contoh: Lari 5K di GBK" value="'+(prefill.activityName||')')+'">'+
+    micButtonHTML('activityName')+
     '</div>'+
 
     // Durasi
@@ -1472,13 +1883,16 @@ async function renderFormAktivitas(prefill) {
     }).join('')+
     '</div></div>'+
 
-    '<div class="form-group">'+
+    '<div class="form-group mic-field-wrap">'+
     '<label class="form-label">Catatan (opsional)</label>'+
     '<textarea id="actNotes" rows="3" placeholder="Catatan bebas...">'+(prefill.notes||'')+'</textarea>'+
+    micButtonHTML('actNotes')+
     '</div>'+
 
     '<button class="btn btn-primary" id="saveActivity">Simpan Log Aktivitas</button>'+
     '<div style="height:var(--space-xl)"></div>'
+
+  attachMicButtons(app)
 
   let selectedMoodAfter = 0
 
@@ -1556,8 +1970,10 @@ async function renderJournal() {
         '<p class="card-title" style="color:var(--color-journal)">Prompt hari ini 💭</p>'+
         '<p style="font-style:italic;color:var(--color-text)">"'+prompt+'"</p>'+
         '</div>'+
-        '<div class="form-group"><label class="form-label">Tulisanmu</label>'+
-        '<textarea id="journalContent" rows="7" placeholder="Tulis bebas, tidak harus menjawab prompt di atas...">'+(existing?existing.content:'')+'</textarea></div>'+
+        '<div class="form-group mic-field-wrap"><label class="form-label">Tulisanmu</label>'+
+        '<textarea id="journalContent" rows="7" placeholder="Tulis bebas, tidak harus menjawab prompt di atas...">'+(existing?existing.content:'')+'</textarea>'+
+        micButtonHTML('journalContent')+
+        '</div>'+
         '<div class="form-group"><label class="form-label">Mood hari ini</label>'+
         '<div class="mood-selector">'+
         MOOD_EMOJIS.map(function(em,i){
@@ -1575,6 +1991,8 @@ async function renderJournal() {
         // ── Tab Riwayat ──
         '<div id="journalHistory"><div class="loading">Memuat riwayat...</div></div>'
       )
+
+    attachMicButtons(app)
 
     // Tab switch
     document.getElementById('tabTulis').addEventListener('click', function(){ journalTab='tulis'; renderJournalUI() })
@@ -2054,6 +2472,22 @@ async function renderSettings() {
     '</div>'+
     '</div>'+
 
+    (SPEECH_SUPPORTED ?
+      '<div class="card" style="margin-bottom:var(--space-md)">'+
+      '<p class="card-title">🎙️ Speech to Text</p>'+
+      '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted);margin-bottom:var(--space-sm)">Bahasa yang dipakai saat dikte di semua form (Todo, Catatan, Jurnal, Log).</p>'+
+      '<div class="chip-group" id="speechLangChips">'+
+      '<button class="chip'+(getSpeechLang()==='id-ID'?' selected':'')+'" data-lang="id-ID">🇮🇩 Indonesia</button>'+
+      '<button class="chip'+(getSpeechLang()==='en-US'?' selected':'')+'" data-lang="en-US">🇬🇧 English</button>'+
+      '</div>'+
+      '</div>'
+    :
+      '<div class="card" style="margin-bottom:var(--space-md)">'+
+      '<p class="card-title">🎙️ Speech to Text</p>'+
+      '<p style="font-size:var(--font-size-sm);color:var(--color-text-muted)">Browser ini belum mendukung speech-to-text. Coba pakai Chrome untuk fitur ini.</p>'+
+      '</div>'
+    )+
+
     '<div class="card" style="margin-bottom:var(--space-md)">'+
     '<p class="card-title">Data</p>'+
     '<button class="btn btn-secondary" id="exportBtn" style="margin-bottom:var(--space-sm)">📤 Export JSON (backup)</button>'+
@@ -2080,6 +2514,16 @@ async function renderSettings() {
     const lbl = document.getElementById('themeLabel')
     if (lbl) lbl.textContent = getThemeLabel()
   })
+
+  const speechChips = document.getElementById('speechLangChips')
+  if (speechChips) {
+    speechChips.addEventListener('click', function(e) {
+      const c = e.target.closest('.chip'); if (!c) return
+      this.querySelectorAll('.chip').forEach(function(x){ x.classList.remove('selected') })
+      c.classList.add('selected')
+      setSpeechLang(c.dataset.lang)
+    })
+  }
 
   document.getElementById('exportBtn').addEventListener('click', async function() {
     const data = {
@@ -2134,6 +2578,7 @@ fabSheet.addEventListener('click', function(e) {
   if (action==='tulis-jurnal') navigate('journal')
   else if (action==='log-kerja') { navigate('log/kerja'); renderFormKerja() }
   else if (action==='log-aktivitas') { navigate('log/aktivitas'); renderFormAktivitas() }
+  else if (action==='lihat-log') navigate('log')
   else if (action==='tambah-goal') { navigate('goals/tambah'); renderFormGoal() }
   else if (action==='review') navigate('review')
   else if (action==='insights') navigate('insights')
@@ -2283,6 +2728,8 @@ on('goals', renderGoals)
 on('review', renderReview)
 on('insights', renderInsights)
 on('settings', renderSettings)
+on('todo', renderTodoScreen)
+on('notes', renderNotesScreen)
 
 // ══════════════════════════════════════════════
 // THEME MANAGER
@@ -2333,8 +2780,17 @@ init()
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('./sw.js')
-          .then(function(reg) { console.log('SW registered:', reg.scope) })
+          .then(function(reg) {
+            console.log('SW registered:', reg.scope)
+            // Cek update setiap kali halaman dibuka
+            reg.update()
+          })
           .catch(function(err) { console.log('SW failed:', err) })
+
+        // Kalau SW baru sudah siap, reload otomatis untuk pakai versi terbaru
+        navigator.serviceWorker.addEventListener('controllerchange', function() {
+          window.location.reload()
+        })
       })
     }
   </script>

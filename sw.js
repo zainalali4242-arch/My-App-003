@@ -1,6 +1,6 @@
 // sw.js — Service Worker Personal Tracker v1.0
 // Ganti versi ini setiap kali ada update agar cache lama otomatis terhapus
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const CACHE_NAME = 'personal-tracker-' + CACHE_VERSION
 
 // Semua file yang di-cache saat install
